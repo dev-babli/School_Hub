@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!res.ok || !res.body) {
-      return new NextResponse('Camera stream unavailable. Run: py livestream_server.py (from face-recognition-poc)', {
+      return new NextResponse('Camera stream unavailable. Run: py attendance_poc.py from face-recognition-poc', {
         status: 503,
         headers: { 'Content-Type': 'text/plain' },
       });
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (checkOnly) {
       return NextResponse.json({ available: false });
     }
-    return new NextResponse('Camera stream unavailable. Run: py livestream_server.py (from face-recognition-poc)', {
+    return new NextResponse('Camera stream unavailable. Run: py attendance_poc.py from face-recognition-poc', {
       status: 503,
       headers: { 'Content-Type': 'text/plain' },
     });

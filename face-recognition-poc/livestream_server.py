@@ -214,13 +214,23 @@ class StreamHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
         try:
+            consecutive_none = 0
+            max_none = 300  # ~9 sec of no frame before giving up
             while True:
                 with _frame_lock:
                     frame = _latest_frame
                 if frame is None:
+                    consecutive_none += 1
+                    if consecutive_none > max_none:
+                        break
                     time.sleep(0.03)
                     continue
-                _, jpg = cv2.imencode(".jpg", frame)
+                consecutive_none = 0
+                try:
+                    _, jpg = cv2.imencode(".jpg", frame)
+                except Exception:
+                    time.sleep(0.03)
+                    continue
                 self.wfile.write(b"--frame\r\n")
                 self.wfile.write(b"Content-Type: image/jpeg\r\n")
                 self.wfile.write(f"Content-Length: {len(jpg)}\r\n".encode())
@@ -265,19 +275,30 @@ def main():
     while True:
         try:
             if cap is None or not cap.isOpened():
-                cap = cv2.VideoCapture(VIDEO_SOURCE)
+                src = VIDEO_SOURCE
+                # Use FFMPEG backend for HTTP/RTSP (better decoding)
+                if isinstance(src, str) and (src.startswith("http") or src.startswith("rtsp")):
+                    cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+                else:
+                    cap = cv2.VideoCapture(src)
+                if cap.isOpened():
+                    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer to avoid decoding issues
                 if not cap.isOpened():
                     print(f"[WARN] Cannot open camera. Retry in {RECONNECT_DELAY}s...")
                     time.sleep(RECONNECT_DELAY)
                     continue
 
             ret, frame = cap.read()
-            if not ret:
+            if not ret or frame is None:
                 cap.release()
                 cap = None
                 print(f"[WARN] Frame read failed. Reconnecting in {RECONNECT_DELAY}s...")
                 time.sleep(RECONNECT_DELAY)
                 continue
+            try:
+                _ = frame.shape  # Trigger decode; skip if corrupt
+            except Exception:
+                continue  # Skip bad/corrupt frame
 
             now = time.time()
             if now - last_frame_time < frame_interval:
@@ -303,6 +324,9 @@ def main():
         except KeyboardInterrupt:
             break
         except Exception as e:
+            err = str(e).lower()
+            if "decode" in err or "corrupt" in err or "invalid" in err:
+                continue
             print(f"[WARN] {e}")
             if cap is not None:
                 cap.release()

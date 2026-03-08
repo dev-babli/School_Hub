@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { getEnrolledCache, setEnrolledCache, type EnrolledStudent } from 'lib/enrolledFacesCache';
 
 const POC_DIR = join(process.cwd(), 'face-recognition-poc');
 const STUDENTS_CSV = join(POC_DIR, 'students.csv');
 const KNOWN_FACES_DIR = join(POC_DIR, 'known_faces');
-const CACHE_TTL_MS = 30_000;
-let enrolledCache: { data: EnrolledStudent[]; expires: number } | null = null;
 
-export interface EnrolledStudent {
+export type { EnrolledStudent };
+
   name: string;
   student_id: string;
   phone: string;
@@ -20,10 +20,8 @@ export interface EnrolledStudent {
 }
 
 export async function GET() {
-  const now = Date.now();
-  if (enrolledCache && enrolledCache.expires > now) {
-    return NextResponse.json({ students: enrolledCache.data });
-  }
+  const cached = getEnrolledCache();
+  if (cached) return NextResponse.json({ students: cached.data });
   const students: EnrolledStudent[] = [];
   try {
     const csv = await readFile(STUDENTS_CSV, 'utf-8');
@@ -57,7 +55,7 @@ export async function GET() {
       const photo = hasPhoto ? `${safeName}.jpg` : null;
       students.push({ name, student_id, phone, tenant_id, photo, hasPhoto });
     }
-    enrolledCache = { data: students, expires: now + CACHE_TTL_MS };
+    setEnrolledCache(students);
   } catch {
     return NextResponse.json({ students: [] });
   }

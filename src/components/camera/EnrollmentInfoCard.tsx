@@ -33,19 +33,19 @@ export default function EnrollmentInfoCard() {
         <List spacing="2" fontSize="sm" color="gray.600">
           <ListItem display="flex" alignItems="flex-start" gap="2">
             <ListIcon as={MdCheckCircle} color="green.500" mt="0.5" />
-            <span><strong>Registered faces</strong> — When a known (enrolled) face is detected, attendance is marked once and WhatsApp is sent.</span>
+            <span><strong>Simple flow:</strong> Enroll one face → run attendance → when that face appears, green box + name + WhatsApp once per day.</span>
           </ListItem>
           <ListItem display="flex" alignItems="flex-start" gap="2">
             <ListIcon as={MdCheckCircle} color="green.500" mt="0.5" />
-            <span><strong>New faces</strong> — If an unknown face appears, it is analysed, auto-enrolled with a new ID (e.g. Guest_2), and marked present. Only registered faces get attendance.</span>
+            <span><strong>Enroll</strong> — Use <strong>Enroll Face</strong> card or run <code>py enroll_face.py</code>. Name the person. Saves to known_faces.</span>
           </ListItem>
           <ListItem display="flex" alignItems="flex-start" gap="2">
             <ListIcon as={MdCheckCircle} color="green.500" mt="0.5" />
-            <span><strong>Enroll with a name</strong> — Use the <strong>Enroll Face</strong> card on this dashboard (&quot;Start enrollment&quot; button) or run <code style={{ background: 'var(--chakra-colors-gray-100)', padding: '2px 6px', borderRadius: '4px' }}>py enroll_face.py</code> from the <code style={{ background: 'var(--chakra-colors-gray-100)', padding: '2px 6px', borderRadius: '4px' }}>face-recognition-poc</code> folder to scan, analyse, and add a face with a specific name (e.g. Soumeet, ID 1).</span>
+            <span><strong>Run attendance</strong> — <code>py attendance_poc.py</code>. Stream with green box + name appears above. WhatsApp sent once per person per day.</span>
           </ListItem>
           <ListItem display="flex" alignItems="flex-start" gap="2">
             <ListIcon as={MdCheckCircle} color="green.500" mt="0.5" />
-            <span><strong>Same camera</strong> — All scripts use the same camera (saved in <code>camera_config.json</code>).</span>
+            <span><strong>New client?</strong> — Click <strong>Clear all</strong> in Enrolled Faces, then enroll the new person.</span>
           </ListItem>
         </List>
       </Box>

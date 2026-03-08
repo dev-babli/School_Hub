@@ -2,6 +2,7 @@
 
 import {
   Box,
+  Button,
   Flex,
   Table,
   Tbody,
@@ -13,11 +14,13 @@ import {
   useColorModeValue,
   Spinner,
   Avatar,
+  useToast,
 } from '@chakra-ui/react';
 import Card from 'components/card/Card';
-import { MdFace } from 'react-icons/md';
+import { MdFace, MdDeleteSweep } from 'react-icons/md';
 import { Icon } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { apiHeaders } from 'lib/apiClient';
 
 type EnrolledStudent = {
   name: string;
@@ -33,24 +36,43 @@ export default function EnrolledFacesCard() {
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.200');
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+  const toast = useToast();
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchStudents = useCallback(() => {
+    setLoading(true);
     fetch('/api/enrolled-faces')
       .then((r) => r.json())
-      .then((data: { students?: EnrolledStudent[] }) => {
-        if (!cancelled) setStudents(data?.students ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setStudents([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((data: { students?: EnrolledStudent[] }) => setStudents(data?.students ?? []))
+      .catch(() => setStudents([]))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  const handleClearAll = useCallback(async () => {
+    if (!confirm('Clear all enrolled faces? Use this when switching to a new client. Then enroll a new face.')) return;
+    setClearing(true);
+    try {
+      const res = await fetch('/api/clear-enrolled-faces', {
+        method: 'POST',
+        headers: apiHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data?.error ?? 'Failed to clear', status: 'error', isClosable: true });
+        return;
+      }
+      toast({ title: 'Cleared. Enroll a new face for the next client.', status: 'success', isClosable: true });
+      fetchStudents();
+    } catch {
+      toast({ title: 'Failed to clear', status: 'error', isClosable: true });
+    } finally {
+      setClearing(false);
+    }
+  }, [fetchStudents, toast]);
 
   return (
     <Card p="0" alignItems="center" flexDirection="column" w="100%" overflow="hidden">
@@ -62,12 +84,28 @@ export default function EnrolledFacesCard() {
         borderColor={borderColor}
         display="flex"
         alignItems="center"
+        justifyContent="space-between"
         gap="2"
       >
-        <Icon as={MdFace} w="20px" h="20px" color="brand.500" />
-        <Text color={textColor} fontSize="md" fontWeight="600">
-          Enrolled Faces (Registered for Attendance)
-        </Text>
+        <Flex align="center" gap="2">
+          <Icon as={MdFace} w="20px" h="20px" color="brand.500" />
+          <Text color={textColor} fontSize="md" fontWeight="600">
+            Enrolled Faces
+          </Text>
+        </Flex>
+        {students.length > 0 && (
+          <Button
+            size="xs"
+            colorScheme="red"
+            variant="outline"
+            leftIcon={<Icon as={MdDeleteSweep} />}
+            onClick={handleClearAll}
+            isLoading={clearing}
+            aria-label="Clear all (for new client)"
+          >
+            Clear all
+          </Button>
+        )}
       </Box>
       <Box w="100%" overflowX="auto">
         {loading ? (
@@ -76,7 +114,7 @@ export default function EnrolledFacesCard() {
           </Flex>
         ) : students.length === 0 ? (
           <Text py="6" px="4" color="gray.500" fontSize="sm" textAlign="center">
-            No enrolled faces yet. Run the attendance script — new faces are auto-enrolled and marked present.
+            No enrolled faces. Click Enroll Face below, add a name, then run attendance.
           </Text>
         ) : (
           <Table variant="simple" size="sm">

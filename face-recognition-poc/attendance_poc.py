@@ -33,8 +33,8 @@ STUDENTS_CSV = POC_DIR / "students.csv"
 DEMO_MODE = os.environ.get("DEMO_MODE", "").strip() in ("1", "true", "yes")
 # Production: 3 FPS, higher confidence, more consecutive frames (give camera time to settle)
 TARGET_FPS = 6 if DEMO_MODE else 3
-CONFIDENCE_THRESHOLD = 0.85 if DEMO_MODE else 0.95  # 95% required in production
-MATCH_STREAK_REQUIRED = 20 if DEMO_MODE else 28  # More consecutive frames before logging
+CONFIDENCE_THRESHOLD = 0.75 if DEMO_MODE else 0.82  # Simple, reliable match
+MATCH_STREAK_REQUIRED = 12 if DEMO_MODE else 15  # ~5 sec stable before logging
 # One attendance per person per day (no repeat messages)
 ATTENDANCE_ONCE_PER_DAY = True
 DISABLE_AUTO_ENROLL = True  # Only manually enrolled faces get attendance

@@ -11,6 +11,17 @@ export default function LiveFeedCard() {
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.200');
   const [streamAvailable, setStreamAvailable] = useState<boolean | null>(null);
   const [streamError, setStreamError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  // Auto-retry when stream drops
+  useEffect(() => {
+    if (!streamError) return;
+    const t = setTimeout(() => {
+      setStreamError(false);
+      setRetryKey((k) => k + 1);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [streamError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +65,7 @@ export default function LiveFeedCard() {
           Live Camera Feed
         </Text>
       </Box>
-      <Box w="100%" position="relative" minH="240px" bg="black" display="flex" justifyContent="center">
+      <Box w="100%" position="relative" minH="320px" bg="black" display="flex" justifyContent="center">
         {streamAvailable === null ? (
           <Box
             w="100%"
@@ -88,20 +99,20 @@ export default function LiveFeedCard() {
               Stream offline
             </Text>
             <Text fontSize="xs" textAlign="center" maxW="280px">
-              Run livestream server: <code style={{ color: '#68d391' }}>py livestream_server.py</code> (from face-recognition-poc)
-            </Text>
-            <Text fontSize="xs" textAlign="center">
-              (from face-recognition-poc — same camera for Live Feed and Face Scan)
+              {streamError ? 'Stream disconnected. Reconnecting...' : 'Run: '}
+              {!streamError && <code style={{ color: '#68d391' }}>py attendance_poc.py</code>}
+              {!streamError && ' — green box + name + WhatsApp'}
             </Text>
           </Box>
         ) : (
           <img
-            src="/api/camera-stream"
+            key={retryKey}
+            src={`/api/camera-stream?t=${retryKey}`}
             alt="Live camera feed"
             style={{
-              width: '50%',
+              width: '100%',
               height: 'auto',
-              minHeight: '240px',
+              minHeight: '320px',
               objectFit: 'contain',
               display: 'block',
             }}
