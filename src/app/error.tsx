@@ -30,7 +30,7 @@ export default function ErrorPage({
         <Button onClick={reset} colorScheme="brand">
           Try again
         </Button>
-        <Button variant="outline" onClick={() => router.push('/auth/login')}>
+        <Button variant="outline" onClick={() => router.push('/admin/dashboard')}>
           Go to login
         </Button>
       </Box>

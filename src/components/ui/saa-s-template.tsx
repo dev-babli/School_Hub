@@ -122,7 +122,7 @@ const Navigation = React.memo(() => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button type="button" variant="ghost" size="sm" href="/auth/sign-in">
+            <Button type="button" variant="ghost" size="sm" href="/admin/dashboard">
               Sign in
             </Button>
             <Button type="button" variant="default" size="sm" href="/admin/dashboard">
@@ -154,7 +154,7 @@ const Navigation = React.memo(() => {
               Documentation
             </a>
             <div className="flex flex-col gap-2 pt-4">
-              <Button type="button" variant="outline" size="sm" href="/auth/sign-in">
+              <Button type="button" variant="outline" size="sm" href="/admin/dashboard">
                 Sign in
               </Button>
               <Button type="button" variant="default" size="sm" href="/admin/dashboard">
@@ -214,7 +214,7 @@ const Hero = React.memo(() => (
         <Button variant="default" size="lg" href="/admin/dashboard" className="rounded-lg">
           Go to Dashboard
         </Button>
-        <Button variant="outline" size="lg" href="/auth/sign-in" className="rounded-lg">
+        <Button variant="outline" size="lg" href="/admin/dashboard" className="rounded-lg">
           Sign in
         </Button>
       </div>
@@ -305,7 +305,7 @@ const Cta = React.memo(() => (
         <Button variant="default" size="lg" href="/admin/dashboard" className="rounded-lg">
           Go to Dashboard
         </Button>
-        <Button variant="outline" size="lg" href="/auth/sign-in" className="rounded-lg">
+        <Button variant="outline" size="lg" href="/admin/dashboard" className="rounded-lg">
           Sign in
         </Button>
       </div>

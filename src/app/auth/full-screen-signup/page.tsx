@@ -1,11 +1,5 @@
-'use client';
-
-import { Box, Text } from '@chakra-ui/react';
+import { redirect } from 'next/navigation';
 
 export default function FullScreenSignupPage() {
-  return (
-    <Box p="8">
-      <Text>Sign up</Text>
-    </Box>
-  );
+  redirect('/admin/dashboard');
 }

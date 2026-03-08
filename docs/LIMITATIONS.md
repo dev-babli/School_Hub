@@ -20,7 +20,7 @@ This document lists current limitations of the Smart Attendance system for opera
 ## API & Security
 
 - **Optional API key:** When `ATTENDANCE_API_KEY` is set, write APIs require the `X-API-Key` header. When unset, APIs are open. For LAN deployments, consider setting the key.
-- **Dashboard auth:** Supabase auth is available but currently disabled. The dashboard is accessible without login when auth is off.
+- **Dashboard auth:** Local auth (localStorage). No server-side session; accessible after login.
 
 ## Face Recognition
 

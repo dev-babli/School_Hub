@@ -54,8 +54,6 @@ In the Vercel project → **Settings** → **Environment Variables**, add:
 | `KV_REST_API_TOKEN` | From Vercel KV / Upstash | Same as above |
 | `ATTENDANCE_API_KEY` | Random string | Protects write APIs |
 | `NEXT_PUBLIC_ATTENDANCE_API_KEY` | Same as above | Client-side for dashboard |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase URL | Only if using auth |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase key | Only if using auth |
 
 ---
 
@@ -108,5 +106,4 @@ No `vercel.json` is required for standard Next.js.
 | Issue | Fix |
 |-------|-----|
 | Build fails | Check Node version (20+); run `npm run build` locally first |
-| Supabase errors | Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` or leave both empty |
 | WhatsApp test fails | Verify Twilio creds; recipient must send `join <word>` to +1 415 523 8886 |
