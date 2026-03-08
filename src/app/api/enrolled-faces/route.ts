@@ -11,14 +11,6 @@ const KNOWN_FACES_DIR = join(POC_DIR, 'known_faces');
 
 export type { EnrolledStudent };
 
-  name: string;
-  student_id: string;
-  phone: string;
-  tenant_id: string;
-  photo: string | null;
-  hasPhoto: boolean;
-}
-
 export async function GET() {
   const cached = getEnrolledCache();
   if (cached) return NextResponse.json({ students: cached.data });

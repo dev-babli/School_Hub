@@ -13,13 +13,13 @@ export default function LiveFeedCard() {
   const [streamError, setStreamError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  // Auto-retry when stream drops
+  // Auto-retry when stream drops (2s for quick reconnect)
   useEffect(() => {
     if (!streamError) return;
     const t = setTimeout(() => {
       setStreamError(false);
       setRetryKey((k) => k + 1);
-    }, 5000);
+    }, 2000);
     return () => clearTimeout(t);
   }, [streamError]);
 

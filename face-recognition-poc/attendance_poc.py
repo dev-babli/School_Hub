@@ -18,6 +18,9 @@ import os
 import time
 import threading
 from datetime import datetime
+
+# RTSP: force TCP for stable streams (Hikvision, tunnels, etc.)
+os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -498,13 +501,23 @@ def main():
     print(f"Target FPS: {TARGET_FPS} | Confidence: {CONFIDENCE_THRESHOLD} | Streak: {MATCH_STREAK_REQUIRED} | Once per day")
     print("Press 'q' to quit.\n")
 
-    cap = cv2.VideoCapture(VIDEO_SOURCE)
+    def _open_cap():
+        src = VIDEO_SOURCE
+        if isinstance(src, str) and (src.startswith("http") or src.startswith("rtsp")):
+            c = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+        else:
+            c = cv2.VideoCapture(src)
+        if c.isOpened():
+            c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        return c
+
+    cap = _open_cap()
     for _ in range(2):
         if cap.isOpened():
             break
         cap.release()
         time.sleep(2)
-        cap = cv2.VideoCapture(VIDEO_SOURCE)
+        cap = _open_cap()
     if not cap.isOpened():
         print("Failed to open video source.")
         print("  Tips: Hikvision=1, DroidCam=2, webcam=0. Same Wi‑Fi for IP cameras. Edit camera_config.json to change.")
@@ -518,10 +531,27 @@ def main():
     global last_frame_time
     last_frame_time = 0
 
+    RECONNECT_DELAY = 3
     while True:
+        if cap is None or not cap.isOpened():
+            cap = _open_cap()
+            if not cap.isOpened():
+                print("[WARN] Cannot open camera. Retry in 3s...")
+                time.sleep(RECONNECT_DELAY)
+                continue
+
         ret, frame = cap.read()
-        if not ret:
-            break
+        if not ret or frame is None:
+            cap.release()
+            cap = None
+            print("[WARN] Frame read failed. Reconnecting...")
+            time.sleep(RECONNECT_DELAY)
+            continue
+
+        try:
+            _ = frame.shape
+        except Exception:
+            continue
 
         now = time.time()
         if now - last_frame_time < frame_interval:
@@ -561,7 +591,8 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
-    cap.release()
+    if cap is not None:
+        cap.release()
     cv2.destroyAllWindows()
     print("Done.")
 
