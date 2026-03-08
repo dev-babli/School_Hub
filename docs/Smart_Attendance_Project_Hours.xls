@@ -1,0 +1,37 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+  table { border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+  th { background: #2E5090; color: white; font-weight: bold; padding: 10px 12px; text-align: left; border: 1px solid #1a3560; }
+  td { padding: 8px 12px; border: 1px solid #ddd; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  tr.total { background: #2E5090 !important; color: white; font-weight: bold; }
+  .num { text-align: right; }
+  .cat { font-weight: 500; color: #1a3560; }
+</style>
+</head>
+<body>
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Description</th>
+      <th class="num">Hours</th>
+      <th class="num">Rate (USD)</th>
+      <th class="num">Amount (USD)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="cat">Face Recognition & AI Module</td><td>PoC scripts (DeepFace + OpenCV), RTSP/Pinggy/DroidCam support, centroid tracking, stream server, student_faces setup</td><td class="num">14</td><td class="num">10</td><td class="num">140</td></tr>
+    <tr><td class="cat">Dashboard & UI</td><td>Dual-mode (Dedicated/SaaS), stats cards, charts, notifications table, live camera feed, campus selector, time widget</td><td class="num">12</td><td class="num">10</td><td class="num">120</td></tr>
+    <tr><td class="cat">Backend & APIs</td><td>Attendance event API, logs API, demoStore, unknown-faces APIs and assign flow</td><td class="num">7</td><td class="num">10</td><td class="num">70</td></tr>
+    <tr><td class="cat">WhatsApp Integration</td><td>Twilio sandbox integration, custom message template, fallback logic</td><td class="num">2.5</td><td class="num">10</td><td class="num">25</td></tr>
+    <tr><td class="cat">Authentication</td><td>Supabase Auth, login page, route protection middleware, sign out</td><td class="num">3.5</td><td class="num">10</td><td class="num">35</td></tr>
+    <tr><td class="cat">Documentation & Ops</td><td>Deployment guide, Tailscale guide, env setup, RTSP/camera config</td><td class="num">2.5</td><td class="num">10</td><td class="num">25</td></tr>
+    <tr><td class="cat">Testing & Fixes</td><td>Timezone (IST), OpenCV install, duplicate notification fix, DroidCam connection</td><td class="num">3.5</td><td class="num">10</td><td class="num">35</td></tr>
+    <tr class="total"><td colspan="2">TOTAL</td><td class="num">45</td><td class="num">10</td><td class="num">450</td></tr>
+  </tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,21 @@
+Project Hours Summary,Smart School Attendance - WhatsApp Notification Platform,,,
+Prepared for Client,,,,
+Date,February 2025,,,
+,,,,
+Category,Description,Hours,Rate (USD),Amount (USD)
+,,,,
+Face Recognition & AI Module,"PoC scripts (attendance_poc, RTSP/Pinggy, OpenCV fallback), centroid tracking, stream server, student_faces setup",14,10,140
+Unknown Faces Flow,"Backend store, APIs (GET/POST/assign), admin page with grid and assign modal",6,10,60
+Dashboard & UI,"Dual-mode (DEDICATED/SAAS), stats cards, charts, notifications table, campus selector, live camera feed, time widget, production cleanup",12,10,120
+Backend & APIs,"demoStore, attendance-event, attendance-logs, API proxy for camera stream",4,10,40
+WhatsApp Integration,"Twilio sandbox integration, custom message template, env configuration",2.5,10,25
+Authentication,"Supabase Auth: login page, middleware, route protection, sign out",3.5,10,35
+Documentation & Deployment,"Deployment guide, Tailscale guide, README, env and ops setup",2.5,10,25
+Testing & Fixes,"IST timezone, DroidCam/RTSP URL updates, OpenCV reinstall, bug fixes",4.5,10,45
+,,,,
+Total Hours,,49,,490
+,,,,
+Billing Rate,,,10 per hour,
+Total Amount (USD),,,,490
+,,,,
+Notes,"Hours estimated per standard market development practices. Rate: $10/hour as agreed.",,,,
