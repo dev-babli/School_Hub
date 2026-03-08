@@ -22,7 +22,7 @@ from datetime import datetime
 # RTSP: force TCP for stable streams (Hikvision, tunnels, etc.)
 os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 import cv2
 import numpy as np
@@ -34,6 +34,7 @@ KNOWN_FACES_DIR = POC_DIR / "known_faces"
 STUDENTS_CSV = POC_DIR / "students.csv"
 
 DEMO_MODE = os.environ.get("DEMO_MODE", "").strip() in ("1", "true", "yes")
+HEADLESS = os.environ.get("HEADLESS", os.environ.get("NO_GUI", "")).strip() in ("1", "true", "yes")
 # Production: 3 FPS, higher confidence, more consecutive frames (give camera time to settle)
 TARGET_FPS = 6 if DEMO_MODE else 3
 CONFIDENCE_THRESHOLD = 0.75 if DEMO_MODE else 0.82  # Simple, reliable match
@@ -472,12 +473,12 @@ class _StreamHandler(BaseHTTPRequestHandler):
                 self.wfile.write(jpg.tobytes())
                 self.wfile.write(b"\r\n")
                 time.sleep(0.05)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, OSError, ConnectionAbortedError):
             pass
 
 
 def _run_stream_server():
-    server = HTTPServer(("0.0.0.0", STREAM_PORT), _StreamHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", STREAM_PORT), _StreamHandler)
     try:
         server.serve_forever()
     except Exception:
@@ -587,13 +588,15 @@ def main():
             _latest_frame = frame.copy()
             _stream_ready = True
 
-        cv2.imshow("Attendance PoC", frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        if not HEADLESS:
+            cv2.imshow("Attendance PoC", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
     if cap is not None:
         cap.release()
-    cv2.destroyAllWindows()
+    if not HEADLESS:
+        cv2.destroyAllWindows()
     print("Done.")
 
 
