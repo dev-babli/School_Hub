@@ -31,10 +31,13 @@ KNOWN_FACES_DIR = POC_DIR / "known_faces"
 STUDENTS_CSV = POC_DIR / "students.csv"
 
 DEMO_MODE = os.environ.get("DEMO_MODE", "").strip() in ("1", "true", "yes")
-TARGET_FPS = 6 if DEMO_MODE else 4  # Faster feedback in demo
-CONFIDENCE_THRESHOLD = 0.55 if DEMO_MODE else 0.6  # Slightly relaxed in demo
-COOLDOWN_SECONDS = 10 if DEMO_MODE else 30  # Shorter cooldown for repeated demos
-MATCH_STREAK_REQUIRED = 2  # Require 2 consecutive frames above threshold (reduces false positives)
+# Production: 3 FPS, higher confidence, more consecutive frames (give camera time to settle)
+TARGET_FPS = 6 if DEMO_MODE else 3
+CONFIDENCE_THRESHOLD = 0.85 if DEMO_MODE else 0.95  # 95% required in production
+MATCH_STREAK_REQUIRED = 20 if DEMO_MODE else 28  # More consecutive frames before logging
+# One attendance per person per day (no repeat messages)
+ATTENDANCE_ONCE_PER_DAY = True
+DISABLE_AUTO_ENROLL = True  # Only manually enrolled faces get attendance
 MIN_ENROLL_SHARPNESS = 45 if DEMO_MODE else 50  # Allow slightly blurrier in demo
 
 # API: Next.js attendance-event endpoint (ensure dev server is running)
@@ -62,7 +65,7 @@ _frame_lock = threading.Lock()
 _stream_ready = False
 
 # ============== GLOBALS ==============
-last_attendance = {}  # {name: timestamp} for debouncing
+last_attendance_date = {}  # {name: "YYYY-MM-DD"} — one per person per day
 match_streak = {}  # {name: count} for multi-frame confirmation
 last_unknown_report = 0  # Debounce unknown face reports
 UNKNOWN_REPORT_COOLDOWN = 10  # Seconds between unknown face reports
@@ -132,7 +135,7 @@ def _face_quality_ok(crop) -> bool:
     return lap.var() >= MIN_ENROLL_SHARPNESS
 
 
-def auto_enroll_unknown_face(face_crop, known_faces_list: list) -> str | None:
+def _maybe_auto_enroll(face_crop, known_faces_list: list) -> str | None:
     """
     Enroll an unknown face: analyse, save to known_faces/, add to students.csv,
     append to known_faces_list, and mark attendance. Returns enrolled name or None.
@@ -141,7 +144,7 @@ def auto_enroll_unknown_face(face_crop, known_faces_list: list) -> str | None:
     now = time.time()
     if now - last_auto_enroll_time < AUTO_ENROLL_COOLDOWN:
         return None
-    if face_crop is None or not _face_quality_ok(face_crop):
+    if DISABLE_AUTO_ENROLL or face_crop is None or not _face_quality_ok(face_crop):
         return None
     try:
         from enroll_face import add_to_students_csv
@@ -163,16 +166,24 @@ def auto_enroll_unknown_face(face_crop, known_faces_list: list) -> str | None:
 
 
 known_embeddings_cache: dict[str, np.ndarray] = {}
-_use_face_recognition = False
-
-try:
-    import face_recognition
-    _use_face_recognition = True
-except ImportError:
-    pass
+_insightface_app = None
 
 
-def _face_embedding(img: np.ndarray) -> np.ndarray:
+def _get_insightface():
+    global _insightface_app
+    if _insightface_app is not None:
+        return _insightface_app
+    try:
+        from insightface.app import FaceAnalysis
+        app = FaceAnalysis(name="buffalo_sc", providers=["CPUExecutionProvider"])
+        app.prepare(ctx_id=-1, det_size=(320, 320))
+        _insightface_app = app
+        return app
+    except Exception:
+        return None
+
+
+def _face_embedding_cv(img: np.ndarray) -> np.ndarray:
     """Simple embedding: resized grayscale + L2-normalized vector (fallback when face_recognition not available)."""
     if img is None or img.size == 0:
         return np.zeros((1,), dtype="float32")
@@ -186,19 +197,25 @@ def _face_embedding(img: np.ndarray) -> np.ndarray:
     return vec / norm
 
 
-def _face_embedding_fr(img: np.ndarray) -> np.ndarray | None:
-    """face_recognition 128-d encoding. Returns None if no face detected."""
-    if img is None or img.size == 0:
+def _face_embedding_if(img: np.ndarray) -> np.ndarray | None:
+    app = _get_insightface()
+    if app is None or img is None or img.size == 0:
         return None
-    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    encodings = face_recognition.face_encodings(rgb)
-    return encodings[0] if encodings else None
+    try:
+        img_bgr = img if len(img.shape) == 3 else cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        faces = app.get(img_bgr)
+        if not faces:
+            return None
+        emb = faces[0].embedding
+        return emb / (np.linalg.norm(emb) + 1e-6)
+    except Exception:
+        return None
 
 
 def find_match(frame, known_faces):
     """
-    Detect faces in frame and compare against known faces.
-    Uses face_recognition (128-d) when available, else OpenCV grayscale embedding.
+    Detect faces and compare against known faces.
+    Uses InsightFace when available, else OpenCV grayscale fallback.
     Returns (matched_name, confidence, unknown_face_crop).
     """
     try:
@@ -217,39 +234,34 @@ def find_match(frame, known_faces):
     x, y, w, h = max(faces, key=lambda r: r[2] * r[3])
     face_crop = frame[y : y + h, x : x + w].copy()
 
-    if _use_face_recognition:
-        face_emb = _face_embedding_fr(face_crop)
+    app = _get_insightface()
+    if app is not None:
+        face_emb = _face_embedding_if(face_crop)
         if face_emb is not None:
-            known_names = []
-            known_encodings = []
+            best_name, best_score = None, 0.0
             for name, ref_path in known_faces:
                 try:
-                    cache_key = f"fr:{ref_path}"
+                    cache_key = f"if:{ref_path}"
                     enc = known_embeddings_cache.get(cache_key)
                     if enc is None:
                         img = cv2.imread(ref_path)
                         if img is None:
                             continue
-                        enc = _face_embedding_fr(img)
+                        enc = _face_embedding_if(img)
                         if enc is not None:
                             known_embeddings_cache[cache_key] = enc
                     if enc is not None:
-                        known_names.append(name)
-                        known_encodings.append(enc)
+                        sim = float(np.dot(face_emb, enc))
+                        if sim > best_score:
+                            best_score = sim
+                            best_name = name
                 except Exception:
                     continue
-            if known_encodings:
-                matches = face_recognition.compare_faces(
-                    known_encodings, face_emb, tolerance=1.0 - CONFIDENCE_THRESHOLD
-                )
-                distances = face_recognition.face_distance(known_encodings, face_emb)
-                best_idx = np.argmin(distances) if len(distances) > 0 else -1
-                if best_idx >= 0 and matches[best_idx]:
-                    conf = max(0.0, 1.0 - float(distances[best_idx]))
-                    return known_names[best_idx], conf, None
+            if best_name and best_score >= CONFIDENCE_THRESHOLD:
+                return best_name, best_score, None
 
-    # Fallback: OpenCV grayscale embedding
-    face_emb = _face_embedding(face_crop)
+    # Fallback: OpenCV grayscale
+    face_emb = _face_embedding_cv(face_crop)
     best_name = None
     best_score = 0.0
 
@@ -261,7 +273,7 @@ def find_match(frame, known_faces):
                 img = cv2.imread(ref_path)
                 if img is None:
                     continue
-                emb = _face_embedding(img)
+                emb = _face_embedding_cv(img)
                 known_embeddings_cache[cache_key] = emb
             dist = float(np.linalg.norm(face_emb - emb))
             score = max(0.0, 1.0 - dist)
@@ -277,11 +289,11 @@ def find_match(frame, known_faces):
 
 
 def should_log_attendance(name: str) -> bool:
-    """Debounce: only log if cooldown has passed."""
-    now = time.time()
-    if name not in last_attendance:
+    """One attendance per person per day — no repeat messages."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    if name not in last_attendance_date:
         return True
-    return (now - last_attendance[name]) >= COOLDOWN_SECONDS
+    return last_attendance_date[name] != today
 
 
 def report_unknown_face(face_crop) -> bool:
@@ -312,8 +324,8 @@ def report_unknown_face(face_crop) -> bool:
 
 
 def log_attendance(name: str, confidence: float):
-    """Log attendance and trigger WhatsApp via API. Retries with backoff on failure."""
-    last_attendance[name] = time.time()
+    """Log attendance and trigger WhatsApp via API. Once per person per day."""
+    last_attendance_date[name] = datetime.now().strftime("%Y-%m-%d")
     info = students_map.get(name, {"phone": "971582553710", "tenant_id": "delhi"})
     phone = info["phone"]
     tenant_id = info["tenant_id"]
@@ -408,8 +420,8 @@ class _StreamHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/reset-cooldowns":
-            global last_attendance, match_streak
-            last_attendance.clear()
+            global last_attendance_date, match_streak
+            last_attendance_date.clear()
             match_streak.clear()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -480,10 +492,10 @@ def main():
         print("No known faces found. Add images to known_faces/ and run again.")
         return
 
-    print(f"Loaded {len(known_faces)} known faces: {[n for n, _ in known_faces]}" + (" (face_recognition)" if _use_face_recognition else " (OpenCV fallback)"))
+    print(f"Loaded {len(known_faces)} known faces: {[n for n, _ in known_faces]}" + (" (InsightFace)" if _get_insightface() else " (OpenCV fallback)"))
     print(f"Students: {len(students_map)} | API: {API_BASE_URL}")
     print(f"Video: {VIDEO_SOURCE}")
-    print(f"Target FPS: {TARGET_FPS} | Confidence: {CONFIDENCE_THRESHOLD} | Cooldown: {COOLDOWN_SECONDS}s")
+    print(f"Target FPS: {TARGET_FPS} | Confidence: {CONFIDENCE_THRESHOLD} | Streak: {MATCH_STREAK_REQUIRED} | Once per day")
     print("Press 'q' to quit.\n")
 
     cap = cv2.VideoCapture(VIDEO_SOURCE)
@@ -526,20 +538,15 @@ def main():
             match_streak[name] = match_streak.get(name, 0) + 1
             if match_streak[name] >= MATCH_STREAK_REQUIRED and should_log_attendance(name):
                 log_attendance(name, confidence)
-                match_streak[name] = 0  # reset after logging
+                match_streak[name] = 0
+            cv2.putText(frame, f"{name} ({confidence:.0%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         else:
-            match_streak.clear()  # reset streak when no match
-            # Draw label on frame
-            cv2.putText(
-                frame, f"{name} ({confidence:.0%})",
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
-            )
-        else:
+            match_streak.clear()
             enrolled_name = None
             if unknown_crop is not None:
-                enrolled_name = auto_enroll_unknown_face(unknown_crop, known_faces)
+                enrolled_name = _maybe_auto_enroll(unknown_crop, known_faces)
                 if enrolled_name is None:
-                    report_unknown_face(unknown_crop)  # fallback: report to API if no auto-enroll
+                    report_unknown_face(unknown_crop)
             if enrolled_name:
                 cv2.putText(frame, f"Enrolled: {enrolled_name}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
             else:

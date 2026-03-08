@@ -88,7 +88,7 @@ export default function LiveFeedCard() {
               Stream offline
             </Text>
             <Text fontSize="xs" textAlign="center" maxW="280px">
-              Run attendance script: <code style={{ color: '#68d391' }}>py attendance_poc.py</code> or <code style={{ color: '#68d391' }}>py attendance_rtsp_opencv.py</code>
+              Run livestream server: <code style={{ color: '#68d391' }}>py livestream_server.py</code> (from face-recognition-poc)
             </Text>
             <Text fontSize="xs" textAlign="center">
               (from face-recognition-poc — same camera for Live Feed and Face Scan)

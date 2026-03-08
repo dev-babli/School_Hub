@@ -60,14 +60,14 @@ export default function FaceScanAnalysis({
       const res = await fetch('/api/camera-stream?check=1');
       const data = (await res.json()) as { available?: boolean };
       if (data?.available !== true) {
-        setError('Attendance camera not available. Run the attendance script first: py attendance_poc.py (or py attendance_rtsp_opencv.py) from face-recognition-poc folder.');
+        setError('Attendance camera not available. Run the livestream server first: py livestream_server.py from face-recognition-poc folder.');
         setStep('error');
         return;
       }
       setStreamAvailable(true);
       setStep('camera');
     } catch {
-      setError('Could not reach camera stream. Start the attendance script from face-recognition-poc.');
+      setError('Could not reach camera stream. Start livestream_server.py from face-recognition-poc.');
       setStep('error');
     }
   }, []);
