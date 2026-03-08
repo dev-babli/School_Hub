@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { getEnrolledCache, setEnrolledCache, type EnrolledStudent } from 'lib/enrolledFacesCache';
 
@@ -37,13 +37,18 @@ export async function GET() {
       const safeName = name.replace(/\s+/g, '_');
       const exts = ['.jpg', '.jpeg', '.png', '.bmp'];
       let hasPhoto = false;
-      for (const ext of exts) {
-        if (existsSync(join(KNOWN_FACES_DIR, safeName + ext))) {
-          hasPhoto = true;
-          break;
+      const personDir = join(KNOWN_FACES_DIR, safeName);
+      if (existsSync(personDir) && statSync(personDir).isDirectory()) {
+        hasPhoto = readdirSync(personDir).some((f) => exts.some((e) => f.toLowerCase().endsWith(e)));
+      }
+      if (!hasPhoto) {
+        for (const ext of exts) {
+          if (existsSync(join(KNOWN_FACES_DIR, safeName + ext))) {
+            hasPhoto = true;
+            break;
+          }
         }
       }
-
       const photo = hasPhoto ? `${safeName}.jpg` : null;
       students.push({ name, student_id, phone, tenant_id, photo, hasPhoto });
     }

@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { existsSync, unlinkSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, unlinkSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { requireApiKey, authFailureResponse } from 'lib/apiAuth';
 import { invalidateEnrolledCache } from 'lib/enrolledFacesCache';
@@ -21,12 +21,18 @@ export async function POST(request: NextRequest) {
     } else {
       const exts = ['.jpg', '.jpeg', '.png', '.bmp'];
       for (const f of readdirSync(KNOWN_FACES_DIR)) {
-        const ext = f.substring(f.lastIndexOf('.')).toLowerCase();
-        if (exts.includes(ext)) {
-          try {
-            unlinkSync(join(KNOWN_FACES_DIR, f));
-          } catch {}
-        }
+        const full = join(KNOWN_FACES_DIR, f);
+        try {
+          if (existsSync(full) && statSync(full).isDirectory()) {
+            for (const sub of readdirSync(full)) {
+              const subPath = join(full, sub);
+              if (exts.some((e) => sub.toLowerCase().endsWith(e))) unlinkSync(subPath);
+            }
+            rmdirSync(full);
+          } else if (exts.includes(f.substring(f.lastIndexOf('.')).toLowerCase())) {
+            unlinkSync(full);
+          }
+        } catch {}
       }
     }
 

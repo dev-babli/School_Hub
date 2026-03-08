@@ -37,7 +37,7 @@ DEMO_MODE = os.environ.get("DEMO_MODE", "").strip() in ("1", "true", "yes")
 HEADLESS = os.environ.get("HEADLESS", os.environ.get("NO_GUI", "")).strip() in ("1", "true", "yes")
 # Production: 3 FPS, higher confidence, more consecutive frames (give camera time to settle)
 TARGET_FPS = 6 if DEMO_MODE else 3
-CONFIDENCE_THRESHOLD = 0.75 if DEMO_MODE else 0.82  # Simple, reliable match
+CONFIDENCE_THRESHOLD = 0.30 if DEMO_MODE else 0.82  # Demo: 30% match; production: 82%
 MATCH_STREAK_REQUIRED = 12 if DEMO_MODE else 15  # ~5 sec stable before logging
 # One attendance per person per day (no repeat messages)
 ATTENDANCE_ONCE_PER_DAY = True
@@ -100,15 +100,27 @@ def load_students():
 
 
 def load_known_faces():
-    """Load known face images from known_faces/ folder. Returns list of (name, image_path)."""
+    """Load known face images. Supports:
+    - known_faces/PersonName/ (folder with img_001.jpg, ...) - multi-image enrollment
+    - known_faces/PersonName.jpg (legacy single file)
+    Skips Guest_* so only deliberately enrolled persons are recognized."""
     known = []
     if not KNOWN_FACES_DIR.exists():
         KNOWN_FACES_DIR.mkdir(parents=True, exist_ok=True)
         return known
-    for path in KNOWN_FACES_DIR.glob("*"):
-        if path.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp"):
-            name = path.stem.replace("_", " ")  # John_Doe.jpg -> John Doe
-            known.append((name, str(path)))
+    for item in KNOWN_FACES_DIR.iterdir():
+        if item.is_dir():
+            if item.name.startswith("Guest_"):
+                continue
+            name = item.name.replace("_", " ")
+            for p in item.glob("*"):
+                if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp"):
+                    known.append((name, str(p)))
+        elif item.is_file() and item.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp"):
+            if item.stem.startswith("Guest_"):
+                continue
+            name = item.stem.replace("_", " ")
+            known.append((name, str(item)))
     return known
 
 
@@ -220,23 +232,24 @@ def find_match(frame, known_faces):
     """
     Detect faces and compare against known faces.
     Uses InsightFace when available, else OpenCV grayscale fallback.
-    Returns (matched_name, confidence, unknown_face_crop).
+    Returns (matched_name, confidence, unknown_face_crop, bbox) where bbox is (x, y, w, h) or None.
     """
     try:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     except Exception:
-        return None, 0.0, None
+        return None, 0.0, None, None
 
     cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
     if cascade.empty():
-        return None, 0.0, None
+        return None, 0.0, None, None
 
     faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
     if len(faces) == 0:
-        return None, 0.0, None
+        return None, 0.0, None, None
 
     x, y, w, h = max(faces, key=lambda r: r[2] * r[3])
     face_crop = frame[y : y + h, x : x + w].copy()
+    bbox = (x, y, w, h)
 
     app = _get_insightface()
     if app is not None:
@@ -262,7 +275,7 @@ def find_match(frame, known_faces):
                 except Exception:
                     continue
             if best_name and best_score >= CONFIDENCE_THRESHOLD:
-                return best_name, best_score, None
+                return best_name, best_score, None, bbox
 
     # Fallback: OpenCV grayscale
     face_emb = _face_embedding_cv(face_crop)
@@ -288,8 +301,8 @@ def find_match(frame, known_faces):
             continue
 
     if best_name and best_score >= CONFIDENCE_THRESHOLD:
-        return best_name, best_score, None
-    return None, 0.0, face_crop
+        return best_name, best_score, None, bbox
+    return None, 0.0, face_crop, bbox
 
 
 def should_log_attendance(name: str) -> bool:
@@ -563,13 +576,16 @@ def main():
         # Flip for webcam mirror effect (optional)
         frame = cv2.flip(frame, 1)
 
-        name, confidence, unknown_crop = find_match(frame, known_faces)
+        name, confidence, unknown_crop, bbox = find_match(frame, known_faces)
 
         if name and confidence >= CONFIDENCE_THRESHOLD:
             match_streak[name] = match_streak.get(name, 0) + 1
             if match_streak[name] >= MATCH_STREAK_REQUIRED and should_log_attendance(name):
                 log_attendance(name, confidence)
                 match_streak[name] = 0
+            if bbox:
+                x, y, w, h = bbox
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
             cv2.putText(frame, f"{name} ({confidence:.0%})", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         else:
             match_streak.clear()
@@ -578,6 +594,9 @@ def main():
                 enrolled_name = _maybe_auto_enroll(unknown_crop, known_faces)
                 if enrolled_name is None:
                     report_unknown_face(unknown_crop)
+            if bbox:
+                x, y, w, h = bbox
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 165, 255), 2)
             if enrolled_name:
                 cv2.putText(frame, f"Enrolled: {enrolled_name}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
             else:
