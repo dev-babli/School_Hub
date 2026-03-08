@@ -55,7 +55,7 @@ def save_camera_config(video_source: int | str, stream_port: int = DEFAULT_STREA
 def prompt_camera_config(ask_stream_port: bool = True) -> tuple[int | str, int]:
     """
     Use saved config if available (and user confirms), else prompt and save.
-    Returns (VIDEO_SOURCE, STREAM_PORT). VIDEO_SOURCE is int 0 or str URL.
+    Returns (VIDEO_SOURCE, STREAM_PORT). VIDEO_SOURCE is int 0 or str URL (http or rtsp).
     """
     video_source, stream_port = load_camera_config()
     if video_source is not None and stream_port is not None:
@@ -63,12 +63,24 @@ def prompt_camera_config(ask_stream_port: bool = True) -> tuple[int | str, int]:
         if use_saved != "n" and use_saved != "no":
             print(f"  VIDEO_SOURCE: {video_source}  STREAM_PORT: {stream_port}")
             return video_source, stream_port
-    # Prompt
-    print("Camera source (DroidCam / IP webcam, or webcam)")
-    ip = input(f"  IP address (or 0 for webcam) [{DEFAULT_CAM_IP}]: ").strip() or DEFAULT_CAM_IP
-    if ip == "0" or ip.lower() == "webcam":
+    # Prompt: Hikvision (RTSP) or DroidCam/webcam
+    print("Camera type: 1=Hikvision (RTSP), 2=DroidCam/IP webcam, 0=Local webcam")
+    choice = input(f"  Choice (1/2/0) [1]: ").strip().lower() or "1"
+    if choice == "0":
         video_source = 0
+    elif choice == "1":
+        print("  Hikvision RTSP — camera and PC must be on same Wi-Fi.")
+        ip = input(f"  Camera IP (e.g. 192.168.1.100): ").strip()
+        user = input(f"  Username [admin]: ").strip() or "admin"
+        pwd = input(f"  Password: ").strip()
+        channel = input(f"  Channel [101]: ").strip() or "101"
+        if ip and pwd:
+            video_source = f"rtsp://{user}:{pwd}@{ip}:554/Streaming/Channels/{channel}"
+        else:
+            print("  Invalid. Using rtsp://admin:password@192.168.1.100:554/Streaming/Channels/101")
+            video_source = "rtsp://admin:password@192.168.1.100:554/Streaming/Channels/101"
     else:
+        ip = input(f"  IP address [{DEFAULT_CAM_IP}]: ").strip() or DEFAULT_CAM_IP
         port = input(f"  Port [{DEFAULT_CAM_PORT}]: ").strip() or DEFAULT_CAM_PORT
         video_source = f"http://{ip}:{port}/video"
     stream_port = DEFAULT_STREAM_PORT

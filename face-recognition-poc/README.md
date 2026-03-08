@@ -20,7 +20,7 @@ For client deployments, prefer the top-level scripts instead of manual venv mana
    venv\Scripts\python.exe enroll_face.py
    ```
 
-   - Enter the DroidCam IP/port when prompted (or `0` for webcam)
+   - Choose camera type: **1**=Hikvision (RTSP), **2**=DroidCam, **0**=webcam
    - Look at the camera until the script captures and asks for a name
    - This creates `camera_config.json`, `known_faces/*.jpg`, and `students.csv`
 
@@ -130,14 +130,23 @@ Key configuration is controlled via env vars and `camera_config.json`:
 | `TARGET_FPS` | 4 | Frames processed per second |
 | `CONFIDENCE_THRESHOLD` | 0.6 | Min similarity to match (0-1) for OpenCV embedding |
 | `COOLDOWN_SECONDS` | 30 | Debounce: no duplicate log within N seconds |
-| `camera_config.json.video_source` | DroidCam URL or 0 | 0=webcam, or `http://ip:port/video` for DroidCam |
+| `camera_config.json.video_source` | varies | 0=webcam, `rtsp://...` for Hikvision, `http://ip:port/video` for DroidCam |
 | `camera_config.json.stream_port` | 5000 | Port for MJPEG stream consumed by dashboard |
 
 ## RTSP (Hikvision) Setup
 
-1. Get camera IP, username, password
-2. RTSP URL format: `rtsp://user:pass@ip:554/Streaming/Channels/101`
-3. Set in script: `VIDEO_SOURCE = "rtsp://..."`
+When prompted for camera type, choose **1** (Hikvision). Enter IP, username, password, and channel (101=main, 102=sub).
+
+Or edit `camera_config.json` manually (see `camera_config.json.example`):
+
+```json
+{
+  "video_source": "rtsp://admin:password@192.168.1.100:554/Streaming/Channels/101",
+  "stream_port": 5000
+}
+```
+
+Camera and PC must be on the same Wi‑Fi.
 
 ## Troubleshooting
 

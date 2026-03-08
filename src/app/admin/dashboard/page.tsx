@@ -6,22 +6,28 @@ import {
   Flex,
   IconButton,
   SimpleGrid,
+  Spinner,
+  Table,
+  Tbody,
+  Td,
   Text,
+  Th,
+  Thead,
+  Tr,
   useColorModeValue,
 } from '@chakra-ui/react';
-import MiniStatistics from 'components/card/MiniStatistics';
-import IconBox from 'components/icons/IconBox';
 import Card from 'components/card/Card';
 import BarChart from 'components/charts/BarChart';
 import PieChart from 'components/charts/PieChart';
+import LiveFeedCard from 'components/camera/LiveFeedCard';
+import DemoSetupCard from 'components/demo/DemoSetupCard';
 import { Icon } from '@chakra-ui/react';
+import { useCampus } from 'contexts/CampusContext';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  MdPeople,
-  MdPerson,
-  MdGroup,
-  MdEmojiEvents,
-  MdMoreVert,
   MdCheck,
+  MdMoreVert,
+  MdNotificationImportant,
 } from 'react-icons/md';
 import {
   studentsOverviewData,
@@ -96,13 +102,43 @@ function KpiCard({
   );
 }
 
+interface AttendanceLog {
+  id: string;
+  student_name: string;
+  phone: string;
+  time: string;
+  status: string;
+  created_at: number;
+}
+
 export default function DashboardPage() {
   const brandColor = useColorModeValue('brand.500', 'white');
   const boxBg = useColorModeValue('secondaryGray.300', 'whiteAlpha.100');
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const cardBg = useColorModeValue('white', 'whiteAlpha.100');
+  const { tenantId } = useCampus();
 
   const [calendarDate, setCalendarDate] = useState(new Date(2030, 8, 22)); // Sept 22, 2030
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/attendance-logs?tenant_id=${tenantId}&limit=20`);
+      const data = await res.json();
+      setAttendanceLogs(Array.isArray(data?.logs) ? data.logs : []);
+    } catch {
+      setAttendanceLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchLogs();
+    const t = setInterval(fetchLogs, 5000);
+    return () => clearInterval(t);
+  }, [fetchLogs]);
 
   const agendaEvents = [
     { time: '08:00 am', title: 'All Grade Homeroom & Announcement', color: 'purple.100' },
@@ -144,6 +180,83 @@ export default function DashboardPage() {
           <SearchBar borderRadius="30px" />
         </Box>
       </Flex>
+
+      {/* Live Feed + Demo Setup */}
+      <SimpleGrid columns={{ base: 1, xl: 2 }} gap="20px" mb="24px">
+        <LiveFeedCard />
+        <DemoSetupCard />
+      </SimpleGrid>
+
+      {/* Live Attendance Notifications */}
+      <Card p="20px" mb="24px">
+        <Flex w="100%" justify="space-between" align="center" mb="16px">
+          <Flex align="center" gap="2">
+            <Icon as={MdNotificationImportant} w="20px" h="20px" color="brand.500" />
+            <Text color={textColor} fontSize="md" fontWeight="600">
+              Live Attendance Notifications
+            </Text>
+          </Flex>
+          <Text fontSize="xs" color="gray.500">
+            Auto-refreshes every 5s
+          </Text>
+        </Flex>
+        <Box overflowX="auto">
+          {logsLoading ? (
+            <Flex justify="center" py="8">
+              <Spinner size="md" />
+            </Flex>
+          ) : attendanceLogs.length === 0 ? (
+            <Text color="gray.500" fontSize="sm" py="4">
+              No attendance events yet. Start the attendance script and show your face to the camera.
+            </Text>
+          ) : (
+            <Table size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Time</Th>
+                  <Th>Student</Th>
+                  <Th>Phone</Th>
+                  <Th>
+                    <Badge
+                      colorScheme={
+                        attendanceLogs.some((l) => l.status === 'sent' || l.status === 'delivered')
+                          ? 'green'
+                          : 'gray'
+                      }
+                      fontSize="xs"
+                    >
+                      Status
+                    </Badge>
+                  </Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {attendanceLogs.map((log) => (
+                  <Tr key={log.id}>
+                    <Td fontSize="sm">{log.time}</Td>
+                    <Td fontWeight="600">{log.student_name}</Td>
+                    <Td fontSize="sm" color="gray.500">{log.phone}</Td>
+                    <Td>
+                      <Badge
+                        colorScheme={
+                          log.status === 'sent' || log.status === 'delivered'
+                            ? 'green'
+                            : log.status === 'failed'
+                            ? 'red'
+                            : 'gray'
+                        }
+                        fontSize="xs"
+                      >
+                        {log.status}
+                      </Badge>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          )}
+        </Box>
+      </Card>
 
       {/* KPI Cards */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap="20px" mb="24px">

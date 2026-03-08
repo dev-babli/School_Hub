@@ -20,18 +20,25 @@ if %errorlevel% neq 0 (
 )
 for /f "tokens=1 delims=v" %%a in ('node -v 2^>nul') do set NODE_VER=%%a
 echo   Node.js: %NODE_VER%
-py -3.12 --version >nul 2>&1
-if %errorlevel% neq 0 (
-  py --version >nul 2>&1
-  if %errorlevel% neq 0 (
-    echo ERROR: Python 3.12 not found. Install from https://python.org or run: winget install Python.Python.3.12
-    pause
-    exit /b 1
-  )
-  echo WARNING: Python 3.12 recommended. Proceeding with available Python.
-) else (
-  for /f "tokens=2 delims= " %%a in ('py -3.12 --version 2^>nul') do echo   Python: %%a
+
+set PY_CMD=
+py -3.12 --version >nul 2>&1 && set PY_CMD=py -3.12
+if "%PY_CMD%"=="" py -3.11 --version >nul 2>&1 && set PY_CMD=py -3.11
+if "%PY_CMD%"=="" py -3.10 --version >nul 2>&1 && set PY_CMD=py -3.10
+if "%PY_CMD%"=="" py --version >nul 2>&1 && set PY_CMD=py
+if "%PY_CMD%"=="" python --version >nul 2>&1 && set PY_CMD=python
+if "%PY_CMD%"=="" python3 --version >nul 2>&1 && set PY_CMD=python3
+
+if "%PY_CMD%"=="" (
+  echo ERROR: Python not found. Python is installed but not in PATH.
+  echo.
+  echo Fix: During Python install, check "Add Python to PATH".
+  echo Or reinstall: winget install Python.Python.3.12
+  echo Or add manually: set PATH=%%PATH%%;C:\Users\%%USERNAME%%\AppData\Local\Programs\Python\Python312
+  pause
+  exit /b 1
 )
+%PY_CMD% --version
 
 echo.
 echo [1/3] Installing Node dependencies...
@@ -44,12 +51,18 @@ if exist "node_modules" (
 echo.
 echo [2/3] Creating Python virtual environment...
 cd face-recognition-poc
-if not exist "venv" (
-  py -3.12 -m venv venv 2>nul
+
+rem If venv exists, check if it works (copied venvs have wrong paths)
+if exist "venv" (
+  venv\Scripts\python.exe --version >nul 2>&1
   if %errorlevel% neq 0 (
-    echo Trying py -m venv venv...
-    py -m venv venv
+    echo WARNING: venv broken or from another PC. Removing and recreating...
+    rmdir /s /q venv
   )
+)
+
+if not exist "venv" (
+  %PY_CMD% -m venv venv
   if %errorlevel% neq 0 (
     echo ERROR: Failed to create Python venv.
     cd ..

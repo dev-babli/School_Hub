@@ -122,7 +122,8 @@ Before attendance works, you need at least one enrolled face:
 
 2. When asked for the camera source:
    - Type `0` for built-in webcam
-   - Or enter DroidCam IP:port (e.g. `192.168.29.224`) and port (e.g. `4747`)
+   - Type `1` for Hikvision (RTSP) — enter IP, username, password, channel
+   - Type `2` for DroidCam — enter IP and port (e.g. `192.168.29.224`, `4747`)
 
 3. Look at the camera; the script will capture your face and ask for your name.
 
@@ -195,7 +196,7 @@ scripts\start-attendance.bat
 | **“Node.js not found”** | Install Node.js and restart the terminal |
 | **“Python not found”** | Install Python with “Add to PATH” enabled |
 | **face_recognition install fails** | Run: `venv\Scripts\pip.exe install cmake`, then retry setup |
-| **Camera not detected** | Use `0` for webcam; for DroidCam, ensure same Wi‑Fi and correct IP |
+| **Camera not detected** | Use `0` for webcam; for Hikvision, use `1` and enter RTSP credentials; for DroidCam, use `2` and ensure same Wi‑Fi |
 | **Dashboard blank / hangs** | Clear browser cache; ensure no firewall blocking localhost |
 | **WhatsApp not sending** | Parents must send “join &lt;phrase&gt;” to +1 415 523 8886 first |
 | **Port 3000 in use** | Change port: `set PORT=3001 && npm run dev` |
@@ -203,16 +204,40 @@ scripts\start-attendance.bat
 
 ---
 
-## 11. Optional: DroidCam (Phone as Camera)
+## 11. Optional: Hikvision Camera (RTSP)
+
+Use a Hikvision IP camera when the camera and client PC are on the same Wi‑Fi.
+
+1. Find the camera IP on your router or Hikvision SADP tool.
+2. Run `enroll_face.py` or `attendance_poc.py` and choose **1** (Hikvision) when asked for camera type.
+3. Enter:
+   - **IP** (e.g. `192.168.1.100`)
+   - **Username** (usually `admin`)
+   - **Password**
+   - **Channel** (`101` = main stream, `102` = sub stream)
+4. Config is saved to `camera_config.json`. Example:
+
+   ```json
+   {
+     "video_source": "rtsp://admin:password@192.168.1.100:554/Streaming/Channels/101",
+     "stream_port": 5000
+   }
+   ```
+
+5. For manual config, copy `camera_config.json.example` and edit the RTSP URL.
+
+---
+
+## 12. Optional: DroidCam (Phone as Camera)
 
 1. Install **DroidCam** (phone) and **DroidCam Client** (PC).
 2. Connect phone and PC to the same Wi‑Fi.
 3. Start DroidCam on the phone; note the IP and port (e.g. `192.168.29.224:4747`).
-4. When running `enroll_face.py`, enter that IP and port when asked for the camera source.
+4. When running `enroll_face.py`, choose **2** (DroidCam/IP webcam) and enter that IP and port.
 
 ---
 
-## 12. File Structure After Install
+## 13. File Structure After Install
 
 ```
 C:\SchoolHub\

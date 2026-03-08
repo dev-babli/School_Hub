@@ -255,7 +255,7 @@ def main():
         cap = cv2.VideoCapture(VIDEO_SOURCE)
     if not cap.isOpened():
         print("ERROR: Could not open video.")
-        print("  Tips: DroidCam app on + same Wi‑Fi; or run again and enter 0 for webcam. Edit camera_config.json to change.")
+        print("  Tips: Hikvision=1, DroidCam=2, webcam=0. Same Wi‑Fi for IP cameras. Edit camera_config.json to change.")
         sys.exit(1)
 
     # Start MJPEG stream server so dashboard can get feed from this script (no separate stream_server.py)

@@ -495,7 +495,7 @@ def main():
         cap = cv2.VideoCapture(VIDEO_SOURCE)
     if not cap.isOpened():
         print("Failed to open video source.")
-        print("  Tips: DroidCam app on + same Wi‑Fi; or run again and enter 0 for webcam. Edit camera_config.json to change.")
+        print("  Tips: Hikvision=1, DroidCam=2, webcam=0. Same Wi‑Fi for IP cameras. Edit camera_config.json to change.")
         return
 
     # Serve same feed to dashboard (Live Feed + Face Scan use this)
