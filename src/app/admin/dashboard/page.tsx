@@ -38,7 +38,6 @@ import {
 import { SearchBar } from 'components/navbar/searchBar/SearchBar';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { useState } from 'react';
 
 function KpiCard({
   name,
