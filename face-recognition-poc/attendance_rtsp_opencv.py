@@ -48,7 +48,7 @@ _stream_ready = False
 # API Configuration
 API_BASE = os.environ.get("ATTENDANCE_API_URL", "http://localhost:3000")
 API_URL = f"{API_BASE.rstrip('/')}/api/attendance-event"
-DEFAULT_PHONE = "917077805321"
+DEFAULT_PHONE = "971582553710"
 
 # Student name to mark for any face detected in the feed
 DEMO_STUDENT_NAME = "Soumeet"

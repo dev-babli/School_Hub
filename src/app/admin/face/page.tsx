@@ -39,7 +39,7 @@ function studentPayload(
   studentName: string
 ): { student_name: string; phone: string; time: string } {
   const phone =
-    process.env.NEXT_PUBLIC_DEMO_PHONE || '917077805321';
+    process.env.NEXT_PUBLIC_DEMO_PHONE || '971582553710';
   const now = new Date();
   const time = now.toLocaleTimeString('en-IN', {
     hour: '2-digit',

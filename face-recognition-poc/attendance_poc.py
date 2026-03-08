@@ -87,7 +87,7 @@ def load_students():
             name = row.get("name", "").strip()
             if name:
                 students_map[name] = {
-                    "phone": row.get("phone", "").strip() or "916371070959",
+                    "phone": row.get("phone", "").strip() or "971582553710",
                     "tenant_id": row.get("tenant_id", "").strip() or "delhi",
                 }
 
@@ -314,7 +314,7 @@ def report_unknown_face(face_crop) -> bool:
 def log_attendance(name: str, confidence: float):
     """Log attendance and trigger WhatsApp via API. Retries with backoff on failure."""
     last_attendance[name] = time.time()
-    info = students_map.get(name, {"phone": "916371070959", "tenant_id": "delhi"})
+    info = students_map.get(name, {"phone": "971582553710", "tenant_id": "delhi"})
     phone = info["phone"]
     tenant_id = info["tenant_id"]
     time_str = datetime.now().strftime("%I:%M %p")

@@ -58,7 +58,7 @@ COOLDOWN_SECONDS = 300  # 5 minutes
 # API Configuration (set ATTENDANCE_API_URL=http://localhost:3001 if Next.js runs on 3001)
 API_BASE = os.environ.get("ATTENDANCE_API_URL", "http://localhost:3000")
 API_URL = f"{API_BASE.rstrip('/')}/api/attendance-event"
-DEFAULT_PHONE = "917077805321"  # User's phone number
+DEFAULT_PHONE = "971582553710"
 
 # ==========================================
 # 2. STATE MANAGEMENT (DEBOUNCING)

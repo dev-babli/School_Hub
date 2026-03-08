@@ -57,7 +57,7 @@ def _analyse_face_quality(face_crop_gray: np.ndarray) -> tuple[bool, float, str]
 def add_to_students_csv(
     name: str,
     student_id: int | None = None,
-    phone: str = "916371070959",
+    phone: str = "971582553710",
     tenant_id: str = "delhi",
 ) -> None:
     """Add or update student. If student_id is set (e.g. 1 for Soumeet), use it."""
@@ -234,7 +234,7 @@ def main():
     ok, sharpness, msg = _analyse_face_quality(gray_crop)
     print(f"  Analysis: {msg}")
 
-    default_phone = os.environ.get("ENROLL_PHONE", "").strip() or "916371070959"
+    default_phone = os.environ.get("ENROLL_PHONE", "").strip() or "971582553710"
     if os.environ.get("ENROLL_NON_INTERACTIVE") == "1":
         name = os.environ.get("ENROLL_NAME", DEFAULT_ENROLL_NAME).strip() or DEFAULT_ENROLL_NAME
         phone = default_phone
