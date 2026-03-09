@@ -1,7 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap');
-
+/* Font applied via next/font in layout.tsx - avoids @import url() which can cause Invalid token errors */
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 option {

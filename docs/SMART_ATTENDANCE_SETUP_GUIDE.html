@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Attendance - Setup Guide</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #333; }
+    h1 { color: #422AFB; border-bottom: 2px solid #422AFB; padding-bottom: 8px; }
+    h2 { color: #1B2559; margin-top: 24px; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', monospace; }
+    .command { background: #2d3748; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; margin: 8px 0; font-family: Consolas, monospace; }
+    .step { margin: 16px 0; padding: 12px; background: #f7fafc; border-left: 4px solid #422AFB; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+    th { background: #422AFB; color: white; }
+    .note { background: #fff3cd; padding: 12px; border-radius: 6px; margin: 12px 0; }
+    @media print { body { margin: 20px; } .command { background: #e2e8f0; color: #1a202c; } }
+  </style>
+</head>
+<body>
+  <h1>Smart Attendance – Setup Guide</h1>
+  <p>Follow these steps to run the Smart School Attendance system (face recognition + WhatsApp alerts).</p>
+
+  <h2>1. Open the project folder</h2>
+  <div class="command">cd School_Hub</div>
+
+  <h2>2. Start the frontend (Terminal 1)</h2>
+  <div class="step">
+    <div class="command">cd School_Hub<br>npm install<br>npm run dev</div>
+    <p>Dashboard: <strong>http://localhost:3000</strong><br>Go to <strong>http://localhost:3000/admin/dashboard</strong></p>
+  </div>
+
+  <h2>3. Install Python dependencies (one-time)</h2>
+  <div class="command">cd School_Hub\face-recognition-poc<br>pip install opencv-python opencv-contrib-python requests</div>
+
+  <h2>4. Enroll faces (Terminal 2)</h2>
+  <div class="command">cd School_Hub\face-recognition-poc<br>python enroll_face.py</div>
+  <ul>
+    <li>Press <strong>Enter</strong> for Hikvision camera (or type <strong>d</strong> for DroidCam)</li>
+    <li>Enter <strong>name</strong> (e.g. Asif)</li>
+    <li>Enter <strong>parent WhatsApp number</strong> (e.g. 916371070959)</li>
+    <li>Follow on-screen instructions: look at camera, turn left, turn right</li>
+    <li>The script will remind you: tell the parent to send <code>join worth-on</code> to <code>+1 415 523 8886</code></li>
+  </ul>
+
+  <h2>5. Parents join WhatsApp sandbox (to receive messages)</h2>
+  <p>Parents must do this <strong>once</strong> before they can receive attendance messages:</p>
+  <ul>
+    <li>Open the dashboard: <strong>http://localhost:3000/admin/dashboard</strong></li>
+    <li>In the <strong>Demo Setup</strong> card, find the QR code and <strong>scan it with WhatsApp</strong>, <strong>OR</strong></li>
+    <li>From their WhatsApp, send: <strong>join worth-on</strong> to <strong>+1 415 523 8886</strong></li>
+  </ul>
+
+  <h2>6. Start attendance (Terminal 2)</h2>
+  <div class="command">cd School_Hub\face-recognition-poc<br>python attendance_poc.py</div>
+  <p>The camera will start. When a recognized face appears, attendance is logged and WhatsApp is sent.</p>
+
+  <h2>Quick reference</h2>
+  <table>
+    <tr><th>Step</th><th>Terminal</th><th>Command</th></tr>
+    <tr><td>1</td><td>Terminal 1</td><td><code>cd School_Hub</code> → <code>npm run dev</code></td></tr>
+    <tr><td>2</td><td>Terminal 2</td><td><code>cd School_Hub\face-recognition-poc</code> → <code>python enroll_face.py</code></td></tr>
+    <tr><td>3</td><td>Parents</td><td>Scan QR in dashboard or send <code>join worth-on</code> to +1 415 523 8886</td></tr>
+    <tr><td>4</td><td>Terminal 2</td><td><code>python attendance_poc.py</code></td></tr>
+  </table>
+
+  <div class="note">
+    <strong>Important:</strong> Terminal 1 must stay running for the dashboard. Terminal 2 is for Python scripts. Camera and PC must be on the same network. The project must have a <code>.env.local</code> file with Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).
+  </div>
+
+  <p style="margin-top: 32px; font-size: 12px; color: #718096;">Smart School Attendance – School Hub</p>
+</body>
+</html>
