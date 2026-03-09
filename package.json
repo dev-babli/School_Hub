@@ -50,6 +50,8 @@
     "dev:safe": "node scripts/fix-encoding.js && next dev",
     "build": "next build",
     "start": "next start",
+    "start:prod": "next build && next start",
+    "diagnose:layout": "node scripts/diagnose-layout-error.js",
     "lint": "next lint",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build"
