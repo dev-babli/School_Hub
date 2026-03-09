@@ -1,4 +1,4 @@
 {
-  "video_source": "rtsp://admin:Swayam631$ZMn756@192.168.0.115:554/Streaming/Channels/101",
+  "video_source": "http://192.168.29.224:4747/video",
   "stream_port": 5000
 }

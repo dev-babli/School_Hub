@@ -1,0 +1,22 @@
+[
+  {
+    "tenant_id": "delhi",
+    "student_name": "Soumeet",
+    "phone": "971582553710",
+    "time": "01:07 AM",
+    "status": "failed",
+    "id": "evt_1772998637728_091ty6n",
+    "created_at": 1772998637728,
+    "error_message": "No WhatsApp provider configured (set TWILIO_* or WHATSAPP_ACCESS_TOKEN)"
+  },
+  {
+    "tenant_id": "delhi",
+    "student_name": "Soumeet",
+    "phone": "971582553710",
+    "time": "01:37 AM",
+    "status": "failed",
+    "id": "evt_1773000433207_0sanl7y",
+    "created_at": 1773000433207,
+    "error_message": "No WhatsApp provider configured (set TWILIO_* or WHATSAPP_ACCESS_TOKEN)"
+  }
+]

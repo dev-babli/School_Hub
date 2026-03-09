@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Enroll a face with multi-pose capture (min 20 images).
-Shows on-screen instructions: Turn left, Turn right, Look up, Look down, Center.
+Enroll a face with minimal capture (3 images: Front, Left, Right).
+Shows on-screen instructions: Look at camera, Turn slightly left, Turn slightly right.
 Creates a folder per person: known_faces/Asif/img_001.jpg, img_002.jpg, ...
 Adds to students.csv for attendance + WhatsApp.
 
@@ -10,7 +10,7 @@ All scripts use the same camera (see camera_config.json).
 Usage:
   1. Run: python enroll_face.py
   2. Enter name (e.g. Asif)
-  3. Follow on-screen instructions; 20+ images captured from different angles
+  3. Follow on-screen instructions; 3 images captured
   4. Press 'q' to quit without saving
 """
 
@@ -27,26 +27,19 @@ from camera_config import load_camera_config, prompt_camera_config, save_camera_
 POC_DIR = Path(__file__).resolve().parent
 KNOWN_FACES_DIR = POC_DIR / "known_faces"
 STUDENTS_CSV = POC_DIR / "students.csv"
-STABLE_SECONDS = 1.2
+STABLE_SECONDS = 0.8  # Faster capture
 MIN_FACE_SIZE = (80, 80)
-MIN_SHARPNESS = 60
-MIN_IMAGES = 20
+MIN_SHARPNESS = 50  # Slightly lower requirement for budget phones
+MIN_IMAGES = 3
 DEFAULT_ENROLL_NAME = "Soumeet"
 DEFAULT_ENROLL_ID = 1
 
-# On-screen instructions for multi-pose capture
+# On-screen instructions for 3-pose capture
 ENROLL_INSTRUCTIONS = [
     "Look at camera (center)",
     "Turn head SLIGHTLY left",
     "Turn head SLIGHTLY right",
-    "Turn head more LEFT",
-    "Turn head more RIGHT",
-    "Look slightly UP",
-    "Look slightly DOWN",
-    "Center again - hold still",
 ]
-INSTRUCTION_CYCLE = 3  # Repeat each instruction every N new captures
-
 
 def _analyse_face_quality(face_crop_gray: np.ndarray) -> tuple[bool, float, str]:
     if face_crop_gray.size == 0:
@@ -163,8 +156,9 @@ def main():
     last_capture_time = 0
     stable_since = None
     last_rect = None
-    instruction_idx = 0
-    last_instruction_change = 0
+    
+    # Simple instruction index based on count
+    # 0 -> Center, 1 -> Left, 2 -> Right
 
     print(f"\nEnrolling: {name}")
     print(f"Need {MIN_IMAGES} images. Follow the on-screen instructions.")
@@ -180,10 +174,8 @@ def main():
             gray, scaleFactor=1.2, minNeighbors=6, minSize=MIN_FACE_SIZE
         )
 
-        # Cycle instruction based on progress
-        if len(captured_images) > 0 and (len(captured_images) - last_instruction_change) >= INSTRUCTION_CYCLE:
-            instruction_idx = (instruction_idx + 1) % len(ENROLL_INSTRUCTIONS)
-            last_instruction_change = len(captured_images)
+        # Instruction based on current count
+        instruction_idx = min(len(captured_images), len(ENROLL_INSTRUCTIONS) - 1)
         instruction = ENROLL_INSTRUCTIONS[instruction_idx]
 
         if len(faces) == 1:
@@ -207,7 +199,7 @@ def main():
                         if stable_since is None:
                             stable_since = now
                         elif (now - stable_since) >= STABLE_SECONDS:
-                            if now - last_capture_time > 0.4:
+                            if now - last_capture_time > 0.5: # 0.5s delay between captures
                                 pad2 = 20
                                 hf, wf = frame.shape[:2]
                                 y1f = max(0, y - pad2)
@@ -235,7 +227,7 @@ def main():
         cv2.rectangle(frame, (0, 0), (frame.shape[1], 100), (40, 40, 40), -1)
         cv2.putText(frame, f"INSTRUCTION: {instruction}", (20, 35),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
-        cv2.putText(frame, f"Captured: {len(captured_images)}/{MIN_IMAGES} - Keep following instructions", (20, 70),
+        cv2.putText(frame, f"Captured: {len(captured_images)}/{MIN_IMAGES}", (20, 70),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 200), 1)
         if len(faces) != 1:
             hint = "Only one face in frame" if len(faces) > 1 else "Face the camera"

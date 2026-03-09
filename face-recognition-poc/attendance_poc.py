@@ -37,8 +37,8 @@ DEMO_MODE = os.environ.get("DEMO_MODE", "").strip() in ("1", "true", "yes")
 HEADLESS = os.environ.get("HEADLESS", os.environ.get("NO_GUI", "")).strip() in ("1", "true", "yes")
 # Production: 3 FPS, higher confidence, more consecutive frames (give camera time to settle)
 TARGET_FPS = 6 if DEMO_MODE else 3
-CONFIDENCE_THRESHOLD = 0.30 if DEMO_MODE else 0.82  # Demo: 30% match; production: 82%
-MATCH_STREAK_REQUIRED = 12 if DEMO_MODE else 15  # ~5 sec stable before logging
+CONFIDENCE_THRESHOLD = 0.30  # 30% match = recognize; set STRICT=1 for 0.70
+MATCH_STREAK_REQUIRED = 3  # 3 frames (~1 sec) = instant recognition
 # One attendance per person per day (no repeat messages)
 ATTENDANCE_ONCE_PER_DAY = True
 DISABLE_AUTO_ENROLL = True  # Only manually enrolled faces get attendance
@@ -79,6 +79,10 @@ last_frame_time = 0
 frame_interval = 1.0 / TARGET_FPS
 students_map = {}  # {name: {phone, tenant_id}}
 MIN_ENROLL_FACE_SIZE = 60  # Minimum width/height for auto-enroll crop
+
+# LBPH Recognizer
+_lbph_recognizer = None
+_lbph_label_map = {}  # {int_label: name}
 
 
 def load_students():
@@ -122,6 +126,57 @@ def load_known_faces():
             name = item.stem.replace("_", " ")
             known.append((name, str(item)))
     return known
+
+
+def _train_lbph(known_faces):
+    """Train LBPH recognizer with known faces."""
+    global _lbph_recognizer, _lbph_label_map
+    
+    # Check if cv2.face is available
+    try:
+        if not hasattr(cv2, 'face'):
+            print("[INFO] cv2.face not available. LBPH disabled.")
+            return False
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+    except AttributeError:
+        print("[INFO] cv2.face not available. LBPH disabled.")
+        return False
+
+    faces = []
+    labels = []
+    _lbph_label_map = {}
+    label_counter = 0
+    name_to_label = {}
+
+    print(f"Training LBPH on {len(known_faces)} images...")
+    
+    for name, path in known_faces:
+        try:
+            img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                continue
+            
+            # Resize to fixed size for consistency
+            img = cv2.resize(img, (100, 100))
+            
+            if name not in name_to_label:
+                name_to_label[name] = label_counter
+                _lbph_label_map[label_counter] = name
+                label_counter += 1
+            
+            faces.append(img)
+            labels.append(name_to_label[name])
+        except Exception:
+            continue
+
+    if not faces:
+        print("[WARN] No valid faces for LBPH training.")
+        return False
+
+    recognizer.train(faces, np.array(labels))
+    _lbph_recognizer = recognizer
+    print(f"LBPH Trained on {len(faces)} faces for {len(name_to_label)} people.")
+    return True
 
 
 def _get_next_student_id() -> int:
@@ -178,6 +233,10 @@ def _maybe_auto_enroll(face_crop, known_faces_list: list) -> str | None:
     last_auto_enroll_time = now
     print(f"\n>>> AUTO-ENROLLED: {name} (student_id={next_id}) — face analysed and added.")
     log_attendance(name, 1.0)
+    
+    # Re-train LBPH if auto-enroll happens (optional, might be slow)
+    # _train_lbph(known_faces_list) 
+    
     return name
 
 
@@ -231,7 +290,11 @@ def _face_embedding_if(img: np.ndarray) -> np.ndarray | None:
 def find_match(frame, known_faces):
     """
     Detect faces and compare against known faces.
-    Uses InsightFace when available, else OpenCV grayscale fallback.
+    Priority:
+    1. LBPH (if available)
+    2. InsightFace (if available)
+    3. Histogram/Simple CV Fallback
+    
     Returns (matched_name, confidence, unknown_face_crop, bbox) where bbox is (x, y, w, h) or None.
     """
     try:
@@ -251,6 +314,26 @@ def find_match(frame, known_faces):
     face_crop = frame[y : y + h, x : x + w].copy()
     bbox = (x, y, w, h)
 
+    # 1. LBPH Check
+    if _lbph_recognizer:
+        try:
+            face_gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY)
+            face_gray = cv2.resize(face_gray, (100, 100))
+            label, confidence = _lbph_recognizer.predict(face_gray)
+            
+            # LBPH confidence: 0 is perfect match. Usually < 50 is good.
+            # We map it to a 0.0-1.0 score where 1.0 is best.
+            # Let's say threshold is 70.
+            lbph_threshold = 70.0
+            if confidence < lbph_threshold:
+                score = max(0.0, (lbph_threshold - confidence) / lbph_threshold)
+                name = _lbph_label_map.get(label)
+                if name:
+                    return name, score, None, bbox
+        except Exception:
+            pass
+
+    # 2. InsightFace Check (Optional)
     app = _get_insightface()
     if app is not None:
         face_emb = _face_embedding_if(face_crop)
@@ -277,31 +360,41 @@ def find_match(frame, known_faces):
             if best_name and best_score >= CONFIDENCE_THRESHOLD:
                 return best_name, best_score, None, bbox
 
-    # Fallback: OpenCV grayscale
-    face_emb = _face_embedding_cv(face_crop)
+    # 3. Fallback: OpenCV Histogram Correlation
+    # Better than simple embedding for budget phones
     best_name = None
     best_score = 0.0
+    
+    try:
+        face_gray = cv2.cvtColor(face_crop, cv2.COLOR_BGR2GRAY)
+        face_hist = cv2.calcHist([face_gray], [0], None, [256], [0, 256])
+        cv2.normalize(face_hist, face_hist, 0, 1, cv2.NORM_MINMAX)
+        
+        for name, ref_path in known_faces:
+            try:
+                cache_key = f"hist:{ref_path}"
+                ref_hist = known_embeddings_cache.get(cache_key)
+                if ref_hist is None:
+                    img = cv2.imread(ref_path)
+                    if img is None:
+                        continue
+                    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    ref_hist = cv2.calcHist([img_gray], [0], None, [256], [0, 256])
+                    cv2.normalize(ref_hist, ref_hist, 0, 1, cv2.NORM_MINMAX)
+                    known_embeddings_cache[cache_key] = ref_hist
+                
+                score = cv2.compareHist(face_hist, ref_hist, cv2.HISTCMP_CORREL)
+                if score > best_score:
+                    best_score = score
+                    best_name = name
+            except Exception:
+                continue
+    except Exception:
+        pass
 
-    for name, ref_path in known_faces:
-        try:
-            cache_key = f"cv:{ref_path}"
-            emb = known_embeddings_cache.get(cache_key)
-            if emb is None:
-                img = cv2.imread(ref_path)
-                if img is None:
-                    continue
-                emb = _face_embedding_cv(img)
-                known_embeddings_cache[cache_key] = emb
-            dist = float(np.linalg.norm(face_emb - emb))
-            score = max(0.0, 1.0 - dist)
-            if score > best_score:
-                best_score = score
-                best_name = name
-        except Exception:
-            continue
-
-    if best_name and best_score >= CONFIDENCE_THRESHOLD:
+    if best_name and best_score >= 0.6: # Histogram correlation threshold
         return best_name, best_score, None, bbox
+        
     return None, 0.0, face_crop, bbox
 
 
@@ -509,7 +602,10 @@ def main():
         print("No known faces found. Add images to known_faces/ and run again.")
         return
 
-    print(f"Loaded {len(known_faces)} known faces: {[n for n, _ in known_faces]}" + (" (InsightFace)" if _get_insightface() else " (OpenCV fallback)"))
+    # Train LBPH
+    _train_lbph(known_faces)
+
+    print(f"Loaded {len(known_faces)} known faces.")
     print(f"Students: {len(students_map)} | API: {API_BASE_URL}")
     print(f"Video: {VIDEO_SOURCE}")
     print(f"Target FPS: {TARGET_FPS} | Confidence: {CONFIDENCE_THRESHOLD} | Streak: {MATCH_STREAK_REQUIRED} | Once per day")
