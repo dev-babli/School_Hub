@@ -17,7 +17,7 @@ if not exist "node_modules" (
 echo Starting dashboard on http://localhost:3000 ...
 echo Press Ctrl+C in this window to stop.
 echo.
-call npm run start
+call npm run dev
 
 endlocal
 

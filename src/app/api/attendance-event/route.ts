@@ -28,11 +28,12 @@ async function trySendWhatsApp(
   const hasMeta = !!process.env.WHATSAPP_ACCESS_TOKEN;
 
   if (hasTwilio) {
-    const { sendTwilioWhatsAppText, sendTwilioAppointmentReminder } = await import('lib/twilio-whatsapp');
+    const { sendTwilioWhatsAppText, sendTwilioAttendanceTemplate } = await import('lib/twilio-whatsapp');
     const attendanceMsg = `🟢 Alert: ${student_name} has safely arrived at ${time}.`;
     let result = await sendTwilioWhatsAppText(phone, attendanceMsg);
     if (!result.success) {
-      result = await sendTwilioAppointmentReminder(phone, today, time);
+      // Fallback: Use template if free-form fails (e.g. 24h window expired or new number)
+      result = await sendTwilioAttendanceTemplate(phone, student_name, time);
     }
     if (result.success) return result;
     if (hasMeta) {

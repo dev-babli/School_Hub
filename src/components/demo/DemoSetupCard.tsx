@@ -11,6 +11,7 @@ import {
   Text,
   useColorModeValue,
   useToast,
+  Image,
 } from '@chakra-ui/react';
 import Card from 'components/card/Card';
 import { Icon } from '@chakra-ui/react';
@@ -20,8 +21,11 @@ import { useCallback, useEffect, useState } from 'react';
 const SANDBOX_NUMBER = '+1 415 523 8886';
 const SANDBOX_JOIN_PHRASE =
   typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_TWILIO_SANDBOX_JOIN_PHRASE || 'your-sandbox-word')
-    : 'your-sandbox-word';
+    ? (process.env.NEXT_PUBLIC_TWILIO_SANDBOX_JOIN_PHRASE || 'worth-on')
+    : 'worth-on';
+const SANDBOX_JOIN_LINK = `https://wa.me/14155238886?text=${encodeURIComponent(
+  `join ${SANDBOX_JOIN_PHRASE}`,
+)}`;
 
 export default function DemoSetupCard() {
   const textColor = useColorModeValue('secondaryGray.900', 'white');
@@ -221,6 +225,22 @@ export default function DemoSetupCard() {
               To receive attendance alerts, send <strong>join {SANDBOX_JOIN_PHRASE}</strong> to{' '}
               <strong>{SANDBOX_NUMBER}</strong> from your WhatsApp.
             </Text>
+            <Box mt="2">
+              <Text fontSize="xs" color="gray.500" mb="1">
+                Or scan this QR code (opens WhatsApp with the join message pre-filled):
+              </Text>
+              <Image
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                  SANDBOX_JOIN_LINK,
+                )}`}
+                alt={`WhatsApp join QR (join ${SANDBOX_JOIN_PHRASE})`}
+                boxSize="180px"
+                borderRadius="md"
+                borderWidth="1px"
+                borderColor={borderColor}
+                bg="white"
+              />
+            </Box>
             <Link
               href="https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"
               isExternal

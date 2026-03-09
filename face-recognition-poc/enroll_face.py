@@ -152,6 +152,14 @@ def main():
         phone_in = input(f"Enter parent WhatsApp number [{default_phone}]: ").strip()
         phone = phone_in if phone_in else default_phone
 
+        # Remind operator: parent must join sandbox to receive alerts
+        join_phrase = os.environ.get("TWILIO_SANDBOX_JOIN_PHRASE") or os.environ.get("NEXT_PUBLIC_TWILIO_SANDBOX_JOIN_PHRASE") or "worth-on"
+        print("\n--- WHATSAPP: Parent must join sandbox ---")
+        print(f"  Tell the parent to send this from WhatsApp ({phone}):")
+        print(f"  >>  join {join_phrase}")
+        print(f"  >>  to: +1 415 523 8886")
+        print("  (Once they do, they will receive attendance alerts)\n")
+
     KNOWN_FACES_DIR.mkdir(parents=True, exist_ok=True)
     person_dir = KNOWN_FACES_DIR / name.replace(" ", "_")
     person_dir.mkdir(parents=True, exist_ok=True)

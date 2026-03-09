@@ -12,11 +12,13 @@
 
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const SANDBOX_FROM = 'whatsapp:+14155238886';
+// Use environment variable for sender, default to sandbox
+const SANDBOX_FROM = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886';
 
 /** Pre-approved Sandbox templates (Content SID from Twilio) */
 const SANDBOX_TEMPLATES = {
-  appointment_reminder: 'HXb5b62575e6e4ff6129ad7c8efe1f983e', // "Your appointment is coming up on {{1}} at {{2}}"
+  // Use environment variable for template, default to sandbox appointment reminder
+  appointment_reminder: process.env.TWILIO_TEMPLATE_ID || 'HXb5b62575e6e4ff6129ad7c8efe1f983e', 
   verification_code: 'HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual SID from Twilio Console
   order_notification: 'HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // Replace with actual SID from Twilio Console
 };
@@ -102,6 +104,49 @@ export async function sendTwilioAppointmentReminder(
   params.append('To', normalizePhone(to));
   params.append('ContentSid', SANDBOX_TEMPLATES.appointment_reminder);
   params.append('ContentVariables', JSON.stringify({ '1': date, '2': time }));
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(`${ACCOUNT_SID}:${AUTH_TOKEN}`).toString('base64'),
+      },
+      body: params.toString(),
+    });
+
+    const data = (await res.json()) as { error_message?: string; message?: string };
+    if (!res.ok) {
+      const raw = data?.error_message || data?.message || res.statusText;
+      return { success: false, error: mapTwilioError(raw) };
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Network error' };
+  }
+}
+
+/**
+ * Send using a custom Attendance template.
+ * Recommended Template Body: "Alert: {{1}} has arrived at {{2}}."
+ * Variables: {'1': student_name, '2': time}
+ */
+export async function sendTwilioAttendanceTemplate(
+  to: string,
+  student_name: string,
+  time: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!ACCOUNT_SID || !AUTH_TOKEN) {
+    return { success: false, error: 'Twilio not configured' };
+  }
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`;
+  const params = new URLSearchParams();
+  params.append('From', SANDBOX_FROM);
+  params.append('To', normalizePhone(to));
+  // Use the same env var for template ID, or fallback to a placeholder
+  params.append('ContentSid', process.env.TWILIO_TEMPLATE_ID || SANDBOX_TEMPLATES.appointment_reminder);
+  params.append('ContentVariables', JSON.stringify({ '1': student_name, '2': time }));
 
   try {
     const res = await fetch(url, {

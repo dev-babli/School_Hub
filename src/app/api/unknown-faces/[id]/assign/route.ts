@@ -4,7 +4,7 @@ import { assignUnknownFace, getUnknownFaceById } from 'lib/unknownFacesStore';
 import { requireApiKey, authFailureResponse } from 'lib/apiAuth';
 import { getStudentById } from 'lib/studentsConfig';
 import { addLog, updateLogStatus } from 'lib/demoStore';
-import { sendTwilioAppointmentReminder, sendTwilioWhatsAppText } from 'lib/twilio-whatsapp';
+import { sendTwilioAttendanceTemplate, sendTwilioWhatsAppText } from 'lib/twilio-whatsapp';
 import { sendAttendanceNotification, sendHelloWorld } from 'lib/whatsapp';
 
 export async function POST(
@@ -53,7 +53,7 @@ export async function POST(
     const hasMeta = !!process.env.WHATSAPP_ACCESS_TOKEN;
 
     let result = hasTwilio
-      ? await sendTwilioAppointmentReminder(student.phone, today, time)
+      ? await sendTwilioAttendanceTemplate(student.phone, student.name, time)
       : { success: false, error: 'Twilio not configured' };
 
     if (!result.success && hasTwilio) {
