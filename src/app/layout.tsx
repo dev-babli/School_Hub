@@ -1,4 +1,8 @@
 import React, { ReactNode } from 'react';
+import 'styles/globals-tailwind.css';
+import 'styles/App.css';
+import 'styles/Contact.css';
+import 'styles/MiniCalendar.css';
 import AppWrappers from './AppWrappers';
 import type { Metadata, Viewport } from 'next';
 
