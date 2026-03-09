@@ -34,6 +34,15 @@ MIN_IMAGES = 3
 DEFAULT_ENROLL_NAME = "Soumeet"
 DEFAULT_ENROLL_ID = 1
 
+# --- DEFAULT HIKVISION CONFIGURATION ---
+# Update these values for the permanent Hikvision camera
+HIK_USER = "admin"
+HIK_PASS = "Swayam631$ZMn756"
+HIK_IP = "192.168.0.115"
+HIK_CHANNEL = "101"
+DEFAULT_HIKVISION_URL = f"rtsp://{HIK_USER}:{HIK_PASS}@{HIK_IP}:554/Streaming/Channels/{HIK_CHANNEL}"
+# ---------------------------------------
+
 # On-screen instructions for 3-pose capture
 ENROLL_INSTRUCTIONS = [
     "Look at camera (center)",
@@ -106,17 +115,30 @@ def add_to_students_csv(
 
 def main():
     non_interactive = os.environ.get("ENROLL_NON_INTERACTIVE") == "1"
-    video_source, sp = load_camera_config()
-    if video_source is None:
-        if non_interactive:
-            print("No camera_config.json. Run enroll_face.py once to configure.")
-            return
-        video_source, _ = prompt_camera_config(ask_stream_port=False)
+    
+    # --- CAMERA SELECTION LOGIC ---
+    # Default to Hikvision, allow override for DroidCam
+    video_source = DEFAULT_HIKVISION_URL
+    
+    if not non_interactive:
+        print(f"\n--- CAMERA SETUP ---")
+        print(f"Default: Hikvision Camera ({HIK_IP})")
+        print(f"URL: {DEFAULT_HIKVISION_URL}")
+        choice = input("Press ENTER to use Hikvision, or type 'd' for DroidCam/Other: ").strip().lower()
+        
+        if choice == 'd':
+            # Use the existing prompt logic for DroidCam/Webcam
+            video_source, _ = prompt_camera_config(ask_stream_port=False)
+        else:
+            # Save the Hikvision URL so other scripts pick it up too
+            save_camera_config(video_source)
+            print(f"Using Hikvision camera.")
     else:
-        if not non_interactive:
-            use = input("  Use saved camera? (Y/n) [Y]: ").strip().lower()
-            if use in ("n", "no"):
-                video_source, _ = prompt_camera_config(ask_stream_port=False)
+        # In non-interactive mode, just use the default if not set in env
+        if os.environ.get("VIDEO_SOURCE"):
+            video_source = os.environ.get("VIDEO_SOURCE")
+        else:
+            save_camera_config(video_source)
 
     # Get name first
     default_phone = os.environ.get("ENROLL_PHONE", "").strip() or "971582553710"
