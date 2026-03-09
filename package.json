@@ -27,7 +27,7 @@
     "framer-motion": "^4.1.17",
     "lucide-react": "^0.564.0",
     "motion": "^12.34.3",
-    "next": "^15.1.4",
+    "next": "14.2.18",
     "react": "^18.3.1",
     "react-apexcharts": "^1.4.0",
     "react-calendar": "^3.7.0",
@@ -46,7 +46,7 @@
   },
   "scripts": {
     "fix:encoding": "node scripts/fix-encoding.js",
-    "dev": "next dev",
+    "dev": "node scripts/fix-encoding.js && next dev",
     "dev:safe": "node scripts/fix-encoding.js && next dev",
     "build": "next build",
     "start": "next start",
@@ -73,7 +73,7 @@
     "@types/react-table": "^7.7.12",
     "autoprefixer": "^10.4.24",
     "eslint": "^8.23.0",
-    "eslint-config-next": "^15.1.4",
+    "eslint-config-next": "14.2.18",
     "postcss": "^8.5.6",
     "tailwindcss": "3.4.17"
   },
