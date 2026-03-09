@@ -45,7 +45,9 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
+    "fix:encoding": "node scripts/fix-encoding.js",
     "dev": "next dev",
+    "dev:safe": "node scripts/fix-encoding.js && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
