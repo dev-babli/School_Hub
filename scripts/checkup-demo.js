@@ -74,6 +74,19 @@ if (checkFile(studentsPath, 'students.csv exists')) {
     const lines = content.trim().split(/\r?\n/).filter((l) => l.trim());
     const hasData = lines.length >= 2; // header + at least 1 row
     check('students.csv has at least 1 student', hasData);
+    if (!hasData && fs.existsSync(path.join(POC, 'known_faces'))) {
+      const kf = path.join(POC, 'known_faces');
+      try {
+        const items = fs.readdirSync(kf);
+        const hasFaces = items.some((n) => {
+          const p = path.join(kf, n);
+          const st = fs.statSync(p);
+          if (st.isDirectory()) return fs.readdirSync(p).some((f) => /\.(jpg|jpeg|png)$/i.test(f));
+          return /\.(jpg|jpeg|png)$/i.test(n);
+        });
+        if (hasFaces) warn('known_faces has images but students.csv is empty. Run: python sync_students_csv.py');
+      } catch (_) {}
+    }
   } catch {
     fail('students.csv not readable');
     hasFail = true;

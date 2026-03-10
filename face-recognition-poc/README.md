@@ -152,6 +152,7 @@ Camera and PC must be on the same Wi‑Fi.
 
 ## Troubleshooting
 
+- **students.csv not updating:** If enrollment runs but `students.csv` stays empty, the camera may have failed to open (check `camera_config.json` IP). If `known_faces/` has images, run: `python sync_students_csv.py` to add those names to the CSV.
 - **No known faces:** Create `known_faces/` and add at least one image
 - **Camera not found:** Check `VIDEO_SOURCE`; try different indices (1, 2) for multiple cameras
 - **Slow performance:** Reduce `TARGET_FPS` to 2; use GPU: `pip install onnxruntime-gpu`
