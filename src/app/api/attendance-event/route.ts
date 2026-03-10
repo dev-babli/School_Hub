@@ -25,34 +25,16 @@ async function trySendWhatsApp(
   today: string
 ): Promise<{ success: boolean; error?: string }> {
   const hasTwilio = !!process.env.TWILIO_ACCOUNT_SID;
-  const hasMeta = !!process.env.WHATSAPP_ACCESS_TOKEN;
-
   if (hasTwilio) {
     const { sendTwilioWhatsAppText, sendTwilioAttendanceTemplate } = await import('lib/twilio-whatsapp');
     const attendanceMsg = `🟢 Alert: ${student_name} has safely arrived at ${time}.`;
     let result = await sendTwilioWhatsAppText(phone, attendanceMsg);
-    if (!result.success) {
-      // Fallback: Use template if free-form fails (e.g. 24h window expired or new number)
-      result = await sendTwilioAttendanceTemplate(phone, student_name, time);
-    }
-    if (result.success) return result;
-    if (hasMeta) {
-      const { sendAttendanceNotification, sendHelloWorld } = await import('lib/whatsapp');
-      result = await sendAttendanceNotification(phone, student_name, time);
-      if (!result.success) result = await sendHelloWorld(phone);
-      return result;
-    }
-    return result;
-  }
-  if (hasMeta) {
-    const { sendAttendanceNotification, sendHelloWorld } = await import('lib/whatsapp');
-    let result = await sendAttendanceNotification(phone, student_name, time);
-    if (!result.success) result = await sendHelloWorld(phone);
+    if (!result.success) result = await sendTwilioAttendanceTemplate(phone, student_name, time);
     return result;
   }
   return {
     success: false,
-    error: 'No WhatsApp provider configured (set TWILIO_* or WHATSAPP_ACCESS_TOKEN)',
+    error: 'No WhatsApp provider configured (set TWILIO_* env vars)',
   };
 }
 
@@ -85,10 +67,7 @@ export async function POST(request: NextRequest) {
     const ist = new Date(utc + 3600000 * 5.5);
     const today = ist.toLocaleDateString('en-IN', { month: 'numeric', day: 'numeric' });
 
-    let result = await trySendWhatsApp(normalizedPhone, student_name, time, today);
-    if (!result.success) {
-      result = await trySendWhatsApp(normalizedPhone, student_name, time, today);
-    }
+    const result = await trySendWhatsApp(normalizedPhone, student_name, time, today);
 
     if (result.success) {
       await updateLogStatus(entry.id, 'sent');

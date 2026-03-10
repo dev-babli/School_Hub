@@ -146,6 +146,8 @@ Or edit `camera_config.json` manually (see `camera_config.json.example`):
 }
 ```
 
+**Changing camera IP:** If you change the Hikvision camera IP, edit `camera_config.json` and update the IP in `video_source`. All scripts (enroll_face.py, attendance_poc.py, etc.) read from this file. Or set env: `CAMERA_IP=192.168.x.x` and `CAMERA_PASS=...`.
+
 Camera and PC must be on the same Wi‑Fi.
 
 ## Troubleshooting

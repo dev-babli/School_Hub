@@ -16,6 +16,7 @@ Usage:
 
 import csv
 import os
+import re
 import time
 from pathlib import Path
 
@@ -34,14 +35,21 @@ MIN_IMAGES = 3
 DEFAULT_ENROLL_NAME = "Soumeet"
 DEFAULT_ENROLL_ID = 1
 
-# --- DEFAULT HIKVISION CONFIGURATION ---
-# Update these values for the permanent Hikvision camera
-HIK_USER = "admin"
-HIK_PASS = "Swayam631$ZMn756"
-HIK_IP = "192.168.0.115"
-HIK_CHANNEL = "101"
-DEFAULT_HIKVISION_URL = f"rtsp://{HIK_USER}:{HIK_PASS}@{HIK_IP}:554/Streaming/Channels/{HIK_CHANNEL}"
-# ---------------------------------------
+# --- HIKVISION CONFIGURATION ---
+# Primary: camera_config.json or env VIDEO_SOURCE / CAMERA_IP
+# Fallback: these defaults (update when camera IP changes)
+HIK_USER = os.environ.get("CAMERA_USER", "admin")
+HIK_PASS = os.environ.get("CAMERA_PASS", os.environ.get("ATTENDANCE_CAMERA_PASS", "YOUR_PASSWORD"))
+HIK_IP = os.environ.get("CAMERA_IP", "192.168.1.100")
+HIK_CHANNEL = os.environ.get("CAMERA_CHANNEL", "101")
+
+
+def _get_video_source() -> str:
+    """Use camera_config.json first, else build RTSP from env/defaults."""
+    vs, _ = load_camera_config()
+    if vs and isinstance(vs, str) and ("rtsp://" in vs or "http://" in vs):
+        return vs
+    return f"rtsp://{HIK_USER}:{HIK_PASS}@{HIK_IP}:554/Streaming/Channels/{HIK_CHANNEL}"
 
 # On-screen instructions for 3-pose capture
 ENROLL_INSTRUCTIONS = [
@@ -117,13 +125,13 @@ def main():
     non_interactive = os.environ.get("ENROLL_NON_INTERACTIVE") == "1"
     
     # --- CAMERA SELECTION LOGIC ---
-    # Default to Hikvision, allow override for DroidCam
-    video_source = DEFAULT_HIKVISION_URL
-    
+    # Use camera_config.json first (all scripts share this); else env CAMERA_IP/CAMERA_PASS
+    video_source = _get_video_source()
+
     if not non_interactive:
         print(f"\n--- CAMERA SETUP ---")
-        print(f"Default: Hikvision Camera ({HIK_IP})")
-        print(f"URL: {DEFAULT_HIKVISION_URL}")
+        _disp = re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", video_source) if "://" in video_source else video_source
+        print(f"Source: {_disp}")
         choice = input("Press ENTER to use Hikvision, or type 'd' for DroidCam/Other: ").strip().lower()
         
         if choice == 'd':

@@ -46,12 +46,13 @@
   },
   "scripts": {
     "fix:encoding": "node scripts/fix-encoding.js",
-    "dev": "node scripts/fix-encoding.js && next dev",
+    "dev": "node scripts/checkup-demo.js --warn-only && node scripts/fix-encoding.js && next dev",
     "dev:safe": "node scripts/fix-encoding.js && next dev",
     "build": "next build",
     "start": "next start",
     "start:prod": "next build && next start",
     "diagnose:layout": "node scripts/diagnose-layout-error.js",
+    "checkup:demo": "node scripts/checkup-demo.js",
     "lint": "next lint",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build"

@@ -64,6 +64,11 @@
     <tr><td>4</td><td>Terminal 2</td><td><code>python attendance_poc.py</code></td></tr>
   </table>
 
+  <h2>Changing the Hikvision camera IP</h2>
+  <p>If you change the camera IP, update <strong>face-recognition-poc/camera_config.json</strong> so enrollment and attendance use the new address:</p>
+  <div class="command">Edit face-recognition-poc/camera_config.json<br>Update "video_source" with the new IP, e.g.:<br>rtsp://admin:password@NEW_IP:554/Streaming/Channels/101</div>
+  <p>Or set env: <code>CAMERA_IP=192.168.x.x</code> and <code>CAMERA_PASS=...</code> before running enroll_face.py.</p>
+
   <div class="note">
     <strong>Important:</strong> Terminal 1 must stay running for the dashboard. Terminal 2 is for Python scripts. Camera and PC must be on the same network. The project must have a <code>.env.local</code> file with Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).
   </div>

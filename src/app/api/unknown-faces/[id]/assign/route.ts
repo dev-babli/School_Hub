@@ -5,7 +5,6 @@ import { requireApiKey, authFailureResponse } from 'lib/apiAuth';
 import { getStudentById } from 'lib/studentsConfig';
 import { addLog, updateLogStatus } from 'lib/demoStore';
 import { sendTwilioAttendanceTemplate, sendTwilioWhatsAppText } from 'lib/twilio-whatsapp';
-import { sendAttendanceNotification, sendHelloWorld } from 'lib/whatsapp';
 
 export async function POST(
   request: NextRequest,
@@ -50,22 +49,13 @@ export async function POST(
     });
 
     const hasTwilio = !!process.env.TWILIO_ACCOUNT_SID;
-    const hasMeta = !!process.env.WHATSAPP_ACCESS_TOKEN;
-
     let result = hasTwilio
       ? await sendTwilioAttendanceTemplate(student.phone, student.name, time)
-      : { success: false, error: 'Twilio not configured' };
+      : { success: false, error: 'Twilio not configured (set TWILIO_* env vars)' };
 
     if (!result.success && hasTwilio) {
       const msg = `🟢 Alert: ${student.name} has safely arrived at ${time}.`;
       result = await sendTwilioWhatsAppText(student.phone, msg);
-    }
-    if (!result.success && hasMeta) {
-      result = await sendAttendanceNotification(student.phone, student.name, time);
-      if (!result.success) result = await sendHelloWorld(student.phone);
-    }
-    if (!result.success && !hasTwilio && !hasMeta) {
-      result = { success: false, error: 'No WhatsApp provider configured (set TWILIO_* or WHATSAPP_ACCESS_TOKEN)' };
     }
 
     if (result.success) {
